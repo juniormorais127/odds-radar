@@ -8,8 +8,13 @@ const context=vm.createContext({document:{getElementById:node,querySelectorAll:(
 const fixture={at:new Date().toISOString(),games:[{home:'Home',away:'Away',time:new Date(Date.now()+3600000).toISOString(),league:'Test',books:{giro:{odds:[2.5,3,3],url:'https://girocerto.io'},esporte:{odds:[2,3.8,4.2],url:'https://esportenetsp.com.br'}}}],sources:[]};context.fixture=fixture;
 vm.runInContext('state=fixture;tab="sure";render();',context);assert.match(node('summary').textContent,/1 surebets/);vm.runInContext('calculate(0)',context);assert.match(node('calc').innerHTML,/Menor retorno/);
 vm.runInContext('state.at="2020-01-01T00:00:00Z";render();',context);assert.match(node('summary').textContent,/0 surebets/);
-vm.runInContext('state=fixture;state.at=new Date().toISOString();tab="value";render();',context);assert.match(node('summary').textContent,/3 sele/);
-console.log('Verified matching, invalid odds, synthetic surebet, calculator, stale blocking and price-gap filters.');
+vm.runInContext('state=fixture;state.at=new Date().toISOString();tab="value";render();',context);assert.match(node('summary').textContent,/3 diferenças/);
+vm.runInContext('state.at="2020-01-01T00:00:00Z";tab="value";render();',context);
+assert.match(node('summary').textContent,/3 diferenças/);
+assert.match(node('notice').textContent,/Dados antigos/);
+vm.runInContext('tab="sure";render();',context);
+assert.match(node('summary').textContent,/0 surebets/);
+console.log('Verified matching, invalid odds, synthetic surebet, calculator, stale surebet blocking and historical price differences.');
 
 const sample=fs.readFileSync("scripts/fixtures/jogos-day.html","utf8");const parsed=parseJogosPage(sample,2026);assert.ok(parsed.length>10);const pal=parsed.find(g=>g.home==="Palmeiras SP");assert.ok(pal);assert.equal(pal.odds.length,3);assert.equal(new Date(pal.time).toISOString(),"2026-11-05T22:30:00.000Z");assert.ok(pal.url.startsWith("https://esportenet-bet.jogos.app/"));console.log("Verified HTML parser, odds ordering, dates and source URLs.");
 
