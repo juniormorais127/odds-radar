@@ -1,0 +1,4 @@
+import http from 'node:http';import fs from 'node:fs';import app from '../worker/index.js';
+const store=new Map();for(const f of fs.readdirSync('worker/catalog-data'))store.set('catalog/'+f,fs.readFileSync('worker/catalog-data/'+f));
+const env={BUCKET:{get:async key=>{const value=store.get(key);return value?{body:value,json:async()=>JSON.parse(Buffer.from(value).toString())}:null},put:async(key,value)=>store.set(key,typeof value==='string'?Buffer.from(value):Buffer.from(value))}};
+http.createServer(async(req,res)=>{try{const r=await app.fetch(new Request('http://localhost:4173'+req.url,{method:req.method}),env);res.writeHead(r.status,Object.fromEntries(r.headers));res.end(Buffer.from(await r.arrayBuffer()))}catch(e){res.writeHead(500);res.end(e.message)}}).listen(4173,'127.0.0.1',()=>console.log('http://localhost:4173'));

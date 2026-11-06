@@ -1,0 +1,11 @@
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const context=vm.createContext({key:s=>s.toLowerCase().replace(/[^a-z]/g,''),Date,console});
+vm.runInContext(fs.readFileSync('worker/alerts.js','utf8')+';globalThis.find=findAlerts;',context);
+const offer={source:'giro',sport:'football',home:'Team Alpha',away:'Team Beta',time:'2026-11-04T20:00:00Z',at:'2026-11-05T00:00:00Z',markets:[]};
+const result={id:'event',sport:'football',home:'Team Alpha',away:'Team Beta',time:'2026-11-04T20:00:00Z',provider:'Test',status:'finished'};
+assert.equal(context.find([offer],[result]).alerts.length,1);
+assert.equal(context.find([offer],[{...result,sport:'basketball'}]).alerts.length,0);
+assert.equal(context.find([offer],[{...result,home:'Other Team'}]).alerts.length,0);
+const mismatch=context.find([offer],[{...result,time:'2026-11-04T16:00:00Z'}]);assert.equal(mismatch.alerts.length,0);assert.equal(mismatch.reviews.length,1);
+assert.equal(context.find([offer],[{...result,time:'2026-11-01T20:00:00Z'}]).alerts.length,0);
+console.log('Verified sport isolation, exact team matching, time tolerance, manual-review routing and duplicate protection.');
