@@ -22,3 +22,6 @@ Fontes: `worker/backend.js`, `worker/alerts.js`, `worker/page.html`. O arquivo `
 
 Execute `npm test` para verificar parsers, catálogo, monitor e fallbacks. Nunca adicione tokens ou arquivos `.env` ao Git.
 `n## GitHub Pages`nA versao estatica usa scripts/build-pages.mjs. O workflow consulta fontes e publica snapshots a cada hora, sujeito a atrasos do GitHub. Atualizar carrega a ultima coleta publicada; nao consulta as casas pelo navegador. O catalogo continua historico. Habilite Pages com origem GitHub Actions.
+
+As seis casas novas ficam na aba Novas casas, com 27 cotacoes de consulta manual anterior em 06/11/2026. O horario exato nao foi registrado. Os dados nao sao renovados pelo Actions e nao entram em oportunidades atuais. O cadastro esta em worker/house-registry.json.
+

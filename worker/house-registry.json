@@ -1,0 +1,23 @@
+{
+  "observedOn": "2026-11-06",
+  "observationNote": "Odds lidas sem login nas páginas públicas em consulta anterior desta conversa em 06/11/2026. Horário exato da leitura não registrado. Estes valores não foram coletados novamente na publicação.",
+  "houses": [
+    {"key":"two","name":"2UP","url":"https://2up.io/pt-br/sports/soccer/england/premier-league","note":"O link de Uganda exibiu preços zerados; as cotações válidas abaixo vieram da Premier League inglesa."},
+    {"key":"grana","name":"Granawin","url":"https://granawin-go.com/br/prematch/football/1073090-uganda-premier-league/12270976-kigezi-homeboys-mbarara-city","note":"Divergência grande em relação a Sportsbet e ExclusiveBet no mesmo confronto. Exige validar evento, mercado, regras e atualização; não é oportunidade confirmada."},
+    {"key":"sportsbet","name":"Sportsbet.io","url":"https://sportsbet.io/pt/sports/soccer/uganda/premier-league/matches?event=kigezi-homeboyz-fc-v-mbarara-fc-0010c7279e00000000000000"},
+    {"key":"exclusive","name":"ExclusiveBet","url":"https://exclusivebeteu.com/sports/betting/evento/1/football/uganda/premier-league/kigezi-homeboys-mbarara-city/318952592910655488/popular"},
+    {"key":"stake","name":"Stake","url":"https://stake.com/pt/sports/soccer/france/ligue-1/1793994300000-toulouse-strasbourg"},
+    {"key":"fortune","name":"FortuneJack","url":"https://fortunejack.com/pt/crypto-sportsbook/soccer/argentina/liga-profesional/instituto-ac-cordoba-newells-old-boys-2728784481556238343"}
+  ],
+  "records": [
+    {"house":"two","home":"Nottingham Forest","away":"Manchester City","league":"Premier League inglesa","market":"Resultado final · tempo regulamentar","odds":[4.49,3.94,1.69]},
+    {"house":"two","home":"Nottingham Forest","away":"Manchester City","league":"Premier League inglesa","market":"Resultado do 1º tempo","odds":[4.55,2.39,2.23]},
+    {"house":"grana","home":"Kigezi Homeboys","away":"Mbarara City","league":"Uganda · Premier League","market":"Resultado final · tempo regulamentar","odds":[12.3,4.1,1.25],"requiresReview":true},
+    {"house":"sportsbet","home":"Kigezi Homeboyz FC","away":"Mbarara FC","league":"Uganda · Premier League","market":"Resultado final · tempo regulamentar","odds":[2.46,3,2.64]},
+    {"house":"sportsbet","home":"Kigezi Homeboyz FC","away":"Mbarara FC","league":"Uganda · Premier League","market":"Resultado do 1º tempo","odds":[3.22,1.92,3.41]},
+    {"house":"exclusive","home":"Kigezi Homeboys","away":"Mbarara City FC","league":"Uganda · Premier League","market":"Resultado final · tempo regulamentar","odds":[2.4,2.9,2.63]},
+    {"house":"stake","home":"Toulouse FC","away":"Strasbourg Alsace","league":"França · Ligue 1","market":"Resultado final · tempo regulamentar","odds":[1.99,3.75,3.35]},
+    {"house":"fortune","home":"Instituto AC Cordoba","away":"Newell’s Old Boys","league":"Argentina · Liga Profesional","market":"Resultado final · tempo regulamentar","odds":[1.85,3.1,4.9]},
+    {"house":"fortune","home":"Instituto AC Cordoba","away":"Newell’s Old Boys","league":"Argentina · Liga Profesional","market":"Resultado do 1º tempo","odds":[2.64,1.8,6]}
+  ]
+}

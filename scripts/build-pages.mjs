@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
 import app from '../worker/index.js';
+import {withRegisteredHouses} from './registered-houses.mjs';
 const output='pages-dist';
 await fs.mkdir(output+'/data/catalog',{recursive:true});
 const saved=new Map();
@@ -17,7 +18,7 @@ for(const name of await fs.readdir('worker/catalog-data')){
  await fs.writeFile(output+'/data/catalog/'+name.replace(/\.gz$/,''),name.endsWith('.gz')?gunzipSync(bytes):bytes);
 }
 await fs.copyFile('worker/archive.json.gz',output+'/coleta-completa.json.gz');
-let html=await fs.readFile('worker/page.html','utf8');
+let html=withRegisteredHouses(await fs.readFile('worker/page.html','utf8'));
 html=html.replace("fetch('/api/odds')","fetch('data/odds.json?t='+Date.now())")
  .replace("fetch('/api/catalog?v=2',","fetch('data/catalog/index.json',")
  .replace("fetch('/api/catalog?sport='+encodeURIComponent(sport)+'&v=2',","fetch('data/catalog/'+encodeURIComponent(sport)+'.json',")

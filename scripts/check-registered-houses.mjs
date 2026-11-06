@@ -1,0 +1,18 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import {withRegisteredHouses} from './registered-houses.mjs';
+const data=JSON.parse(fs.readFileSync('worker/house-registry.json','utf8'));
+const context=vm.createContext({});
+vm.runInContext(fs.readFileSync('worker/registered-houses.js','utf8'),context);
+assert.equal(context.registeredMatches(data,'','', '').length,9);
+assert.equal(context.registeredMatches(data,'two','', '').length,2);
+assert.equal(context.registeredMatches(data,'','primeiro tempo','half').length,3);
+assert.equal(context.registeredMatches(data,'','cordoba','').length,2);
+assert.equal(context.registeredMatches(data,'stake','Kigezi','').length,0);
+const html=withRegisteredHouses(fs.readFileSync('worker/page.html','utf8'));
+new vm.Script(html.match(/<script>([\s\S]*)<\/script>/)[1]);
+assert.match(html,/tab==='houses'\)renderRegisteredHouses/);
+assert.match(html,/initRegisteredHouses\(\);\$\('refresh'\)/);
+assert.ok(!data.records.some(r=>'at' in r||'startsAt' in r));
+console.log('Verified six houses, nine manual markets, filters, script syntax and separation from current opportunity data.');
