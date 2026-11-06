@@ -21,3 +21,4 @@ O catálogo de 35 esportes é histórico, coletado em 05/11/2026; não represent
 Fontes: `worker/backend.js`, `worker/alerts.js`, `worker/page.html`. O arquivo `worker/index.js` é gerado por `npm run build`. O catálogo fica em `worker/catalog-data`. A configuração `.openai/hosting.json` preserva a identidade do site original e não contém credenciais.
 
 Execute `npm test` para verificar parsers, catálogo, monitor e fallbacks. Nunca adicione tokens ou arquivos `.env` ao Git.
+`n## GitHub Pages`nA versao estatica usa scripts/build-pages.mjs. O workflow consulta fontes e publica snapshots a cada hora, sujeito a atrasos do GitHub. Atualizar carrega a ultima coleta publicada; nao consulta as casas pelo navegador. O catalogo continua historico. Habilite Pages com origem GitHub Actions.
