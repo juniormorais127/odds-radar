@@ -12,6 +12,8 @@ Esta versão distribui snapshots JSON estáticos, sem chave, gerados pela coleta
 | bookmakers.json | Todas as 11 casas, situação e cobertura |
 | quotes.json | Uma cotação por casa, jogo, mercado e seleção |
 | bookmakers/giro.json | Cotações da Giro Certo |
+| history.json | Séries de cotações automáticas observadas nas últimas 72 horas |
+| movement-alerts.json | Movimentos de pelo menos 20% registrados na janela |
 
 Outros códigos de casa: `esporte`, `melbet`, `jogos`, `futamina`, `two`, `grana`, `sportsbet`, `exclusive`, `stake`, `fortune`.
 
@@ -43,4 +45,12 @@ const quotes = data.quotes.filter(q =>
 );
 ```
 
-Esta é a base para um futuro serviço com banco, histórico de variações, filtros no servidor e autenticação. Esses recursos não estão implementados pelo GitHub Pages. O acesso técnico público às fontes não estabelece autorização para redistribuição comercial dos dados.
+Esta é a base para um futuro serviço com banco, filtros no servidor e autenticação. Esses recursos não estão implementados pelo GitHub Pages. O acesso técnico público às fontes não estabelece autorização para redistribuição comercial dos dados.
+
+## Histórico de 72 horas
+
+`history.json` preserva cada série por `id` da cotação (mesmo jogo, casa, mercado e seleção), com `samples: [{at, odds}]`. Inclui metadados do jogo, inclusive se o início já passou durante a janela. A coleta não confirma encerramento do jogo. Pontos anteriores a 72 horas são removidos a cada execução. Leituras manuais, fallback e snapshots antigos não entram. O registro começa na primeira execução desta versão; não existe recuperação retroativa de oscilações não coletadas.
+
+O estado é restaurado do artefato `odds-history-v1` do GitHub Actions e salvo novamente após cada coleta. Os artefatos de recuperação têm retenção técnica de 4 dias; os pontos expostos na API são limitados a 72 horas na geração. Se a coleta parar, o arquivo publicado não expira sozinho: consumidores também devem filtrar `samples.at` pela hora atual. Falhas ao restaurar estado interrompem a publicação em vez de apagar silenciosamente o histórico.
+
+`movement-alerts.json` contém altas e quedas absolutas de pelo menos 20% entre observações consecutivas ou desde a primeira observação retida na janela. Cada alerta inclui `from`, `to`, `changePercent`, `direction` e `scope`. São alterações de preço registradas, não prova de odd errada, valor esperado positivo ou preço ainda disponível. Oscilações entre as coletas de 30 minutos não são captadas.

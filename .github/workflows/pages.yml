@@ -9,6 +9,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  actions: read
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -29,7 +30,34 @@ jobs:
       - run: npm test
       - run: node scripts/check-public-parser.mjs
       - run: node scripts/collect-public-houses.mjs
+      - name: Restaurar histórico persistido
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('node:fs');
+            const artifacts = await github.paginate(github.rest.actions.listArtifactsForRepo, {...context.repo, name: 'odds-history-v1', per_page: 100});
+            const latest = artifacts.filter(a => !a.expired).sort((a,b) => Date.parse(b.created_at)-Date.parse(a.created_at))[0];
+            if (latest) {
+              const zip = await github.rest.actions.downloadArtifact({...context.repo, artifact_id: latest.id, archive_format: 'zip'});
+              fs.writeFileSync('history.zip', Buffer.from(zip.data));
+            } else {
+              const response = await fetch('https://juniormorais127.github.io/odds-radar/api/v1/history.json?t='+Date.now());
+              if (response.ok) {
+                const history = await response.json();
+                if (history.schemaVersion !== '1.0.0') throw Error('Histórico publicado inválido');
+                fs.mkdirSync('history-state', {recursive:true});
+                fs.writeFileSync('history-state/history.json', JSON.stringify(history));
+              } else if (response.status !== 404) throw Error('Não foi possível restaurar histórico: HTTP '+response.status);
+            }
+      - run: if [ -f history.zip ]; then mkdir -p history-state; unzip -o history.zip -d history-state; fi
       - run: node scripts/build-pages.mjs
+      - name: Preservar histórico para próxima coleta
+        uses: actions/upload-artifact@v4
+        with:
+          name: odds-history-v1
+          path: history-state/history.json
+          retention-days: 4
+          if-no-files-found: error
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

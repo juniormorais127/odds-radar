@@ -8,3 +8,4 @@ node_modules/
 *.log
 pages-dist/
 collector-output/
+history-state/
