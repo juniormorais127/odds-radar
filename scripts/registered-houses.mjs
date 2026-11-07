@@ -12,12 +12,13 @@ export function withRegisteredHouses(html){
    if(!source.ok)continue;
    const good=(source.records||[]).filter(r=>r.house===source.key&&Array.isArray(r.odds)&&r.odds.length===3&&r.odds.every(o=>Number.isFinite(o)&&o>1));
    if(!good.length)continue;
-   registry.records=registry.records.filter(r=>r.house!==source.key).concat(good.map(r=>({...r,at:source.at,automatic:true,league:'Amostra de evento cadastrado'})));
+   registry.records=registry.records.filter(r=>r.house!==source.key).concat(good.map(r=>({...r,url:source.url,at:source.at,automatic:true,league:'Amostra de evento cadastrado'})));
   }
  }
  const code=fs.readFileSync(new URL('../worker/registered-houses.js',import.meta.url),'utf8');
- const observed=browserRecords().filter(r=>{const c=registry.houses.find(h=>h.key===r.house)?.collection;return !c?.ok||Date.parse(c.at)<=Date.parse(r.at)});
- for(const key of new Set(observed.map(r=>r.house)))registry.records=registry.records.filter(r=>r.house!==key);
+ const norm=s=>s.toLowerCase().replace(/[^a-z0-9]/g,'');
+ const observed=browserRecords().filter(r=>!registry.records.some(c=>c.automatic&&c.house===r.house&&c.market===r.market&&r.homeAliases.some(a=>norm(a)===norm(c.home))&&r.awayAliases.some(a=>norm(a)===norm(c.away))&&Date.parse(c.at)>Date.parse(r.at)));
+ for(const key of new Set(observed.map(r=>r.house)))registry.records=registry.records.filter(r=>r.house!==key||r.automatic);
  registry.records.push(...observed);
  if(registry.houses.length!==6||registry.records.some(r=>!registry.houses.some(h=>h.key===r.house)||r.odds.length!==3||r.odds.some(o=>!Number.isFinite(o)||o<=1)))throw Error('Cadastro de casas inválido');
  html=html.replace('</nav>','<button role="tab" data-tab="houses" aria-selected="false">Novas casas · coleta manual</button></nav><div id="registeredPane" hidden><h2>Novas casas cadastradas</h2><p class="muted">Cotações observadas nas páginas públicas. Atualização automática ainda não integrada.</p><div class="notice warn">Consulta manual de 06/11/2026, com horário exato não registrado. Estes valores podem ter mudado e não entram nas surebets, odds desajustadas ou alertas atuais.</div><div class="catalogFilters"><label>Casa cadastrada<select id="registeredHouse"><option value="">Todas as seis casas</option></select></label><label>Jogo ou mercado<input id="registeredQuery" type="search" placeholder="Ex.: Kigezi, City, primeiro tempo"></label><label>Mercado<select id="registeredMarket"><option value="">Todos os mercados</option><option value="final">Resultado final</option><option value="half">Primeiro tempo</option></select></label></div><div id="registeredSummary" class="help" aria-live="polite"></div><div id="registeredRows"></div><details><summary>Cadastro e situação das integrações</summary><div id="registeredSources"></div></details></div>');

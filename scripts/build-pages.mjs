@@ -2,17 +2,18 @@ import fs from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
 import app from '../worker/index.js';
 import {withRegisteredHouses} from './registered-houses.mjs';
-import {mergeBrowserQuotes} from './browser-quotes.mjs';
+import {mergeBrowserQuotes,mergeAutomaticQuotes} from './browser-quotes.mjs';
 const output='pages-dist';
 await fs.mkdir(output+'/data/catalog',{recursive:true});
 try{await fs.copyFile('collector-output/new-houses.json',output+'/data/new-houses.json')}catch(e){if(e.code!=='ENOENT')throw e}
 const saved=new Map();
+let newHouses;try{newHouses=JSON.parse(await fs.readFile('collector-output/new-houses.json','utf8'))}catch(e){if(e.code!=='ENOENT')throw e}
 const env={BUCKET:{get:async key=>saved.has(key)?{body:saved.get(key),json:async()=>JSON.parse(saved.get(key))}:null,put:async(key,value)=>saved.set(key,value)}};
 for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
  const response=await app.fetch(new Request('https://localhost/api/'+route,{method:route==='monitor'?'POST':'GET'}),env);
  if(!response.ok)throw Error(`${route}: HTTP ${response.status}`);
  const data=await response.json();
- if(route==='odds')mergeBrowserQuotes(data);
+ if(route==='odds'){mergeBrowserQuotes(data);mergeAutomaticQuotes(data,newHouses)}
  await fs.writeFile(output+'/data/'+file,JSON.stringify(data));
  console.log(route,data.at);
 }
