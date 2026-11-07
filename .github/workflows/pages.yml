@@ -24,7 +24,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
       - run: npm test
+      - run: node scripts/check-public-parser.mjs
+      - run: node scripts/collect-public-houses.mjs
       - run: node scripts/build-pages.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

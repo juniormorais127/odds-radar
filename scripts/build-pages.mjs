@@ -4,6 +4,7 @@ import app from '../worker/index.js';
 import {withRegisteredHouses} from './registered-houses.mjs';
 const output='pages-dist';
 await fs.mkdir(output+'/data/catalog',{recursive:true});
+try{await fs.copyFile('collector-output/new-houses.json',output+'/data/new-houses.json')}catch(e){if(e.code!=='ENOENT')throw e}
 const saved=new Map();
 const env={BUCKET:{get:async key=>saved.has(key)?{body:saved.get(key),json:async()=>JSON.parse(saved.get(key))}:null,put:async(key,value)=>saved.set(key,value)}};
 for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
