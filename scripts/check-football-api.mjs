@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {footballApi} from './football-api.mjs';
+const now=Date.parse('2026-11-07T12:00:00Z');
+const book=(extra={})=>({odds:[1.2,6,12],at:'2026-11-07T11:59:00Z',url:'https://example.com/event',...extra});
+const game={home:'A',away:'B',time:'2026-11-08T12:00:00Z',books:{giro:book(),stake:book({manualSnapshot:true,offline:true}),melbet:book({odds:[1.1,0,4]}),futamina:book({at:'2026-11-07T10:00:00Z'})}};
+const data={games:[game,{...game,time:'2026-11-06T12:00:00Z'}],sources:[]};
+const result=footballApi(data,{sources:[{key:'stake',ok:false,at:'2026-11-07T12:00:00Z',error:'HTTP 403'}]},now);
+assert.equal(result.events.length,1);assert.equal(result.quotes.length,9);
+assert.equal(result.bookmakers.length,11);
+assert.equal(result.bookmakers.find(b=>b.id==='stake').collectionStatus,'failed');
+assert(result.quotes.filter(q=>q.bookmakerId==='stake').every(q=>q.freshness==='historical'&&q.method==='browser_manual'));
+assert(result.quotes.filter(q=>q.bookmakerId==='futamina').every(q=>q.freshness==='historical'));
+assert.equal(result.bookmakers.find(b=>b.id==='giro').currentQuoteCount,3);
+assert(result.quotes.every(q=>q.eventId===result.events[0].id));
+assert.equal(result.events[0].id,footballApi(data,null,now+1000).events[0].id);
+assert.equal(footballApi({...data,games:[game,{...game,time:'2026-11-09T12:00:00Z'}]},null,now).events.length,2);
+assert.equal(result.quotes.find(q=>q.bookmakerId==='stake').observedAt,'2026-11-07T11:59:00.000Z');
+console.log('Football API: attribution, timestamps, freshness, status, IDs and validation OK');
