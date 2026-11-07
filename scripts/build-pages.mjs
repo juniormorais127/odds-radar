@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
 import app from '../worker/index.js';
 import {withRegisteredHouses} from './registered-houses.mjs';
+import {mergeBrowserQuotes} from './browser-quotes.mjs';
 const output='pages-dist';
 await fs.mkdir(output+'/data/catalog',{recursive:true});
 try{await fs.copyFile('collector-output/new-houses.json',output+'/data/new-houses.json')}catch(e){if(e.code!=='ENOENT')throw e}
@@ -11,6 +12,7 @@ for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
  const response=await app.fetch(new Request('https://localhost/api/'+route,{method:route==='monitor'?'POST':'GET'}),env);
  if(!response.ok)throw Error(`${route}: HTTP ${response.status}`);
  const data=await response.json();
+ if(route==='odds')mergeBrowserQuotes(data);
  await fs.writeFile(output+'/data/'+file,JSON.stringify(data));
  console.log(route,data.at);
 }

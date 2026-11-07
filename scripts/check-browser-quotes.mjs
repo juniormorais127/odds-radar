@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {mergeBrowserQuotes,browserRecords,browserSnapshot} from './browser-quotes.mjs';
+const records=browserRecords();assert.equal(records.length,24);
+assert.equal(new Set(records.map(r=>r.house)).size,4);
+const data={games:[{home:'Nottm Forest',away:'Man City',time:'2026-11-07T17:30:00Z',books:{melbet:{odds:[4,4,2]}}}],sources:[]};
+mergeBrowserQuotes(data);
+assert.equal(data.games[0].books.two.odds[0],4.44);
+assert.equal(data.games[0].books.grana.odds[0],4.7);
+assert.equal(data.games[0].books.two.at,browserSnapshot.at);
+assert.equal(data.games[0].books.two.manualSnapshot,true);
+assert.equal(data.games[0].books.two.offline,true);
+const duplicated={games:[{home:'Nottm Forest',away:'Man City',time:'2026-11-07T17:30:00Z',books:{giro:{odds:[4,4,2]}}},{home:'Nottingham Forest',away:'Manchester City',time:'2026-11-07T17:30:00Z',books:{melbet:{odds:[4.5,4,1.8]}}}],sources:[]};
+mergeBrowserQuotes(duplicated);
+assert.equal(duplicated.games.filter(g=>g.time==='2026-11-07T17:30:00Z').length,1);
+assert.ok(duplicated.games[0].books.melbet&&duplicated.games[0].books.giro&&duplicated.games[0].books.two);
+const isolated={games:[{home:'Nottm Forest',away:'Man City',time:'2026-11-21T17:30:00Z',books:{}}],sources:[]};mergeBrowserQuotes(isolated);
+assert.deepEqual(isolated.games[0].books,{});
+console.log('Verified 24 timestamped browser records, exact aliases, kickoff isolation and preserved snapshot age.');

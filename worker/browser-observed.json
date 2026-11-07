@@ -1,0 +1,21 @@
+{
+ "at":"2026-11-07T01:19:54Z",
+ "method":"Leitura assistida no navegador, sem login",
+ "events":{
+  "leeds":{"home":"Leeds United","away":"Tottenham Hotspur","time":"2026-11-07T12:30:00Z","homeAliases":["Leeds","Leeds United"],"awayAliases":["Tottenham","Tottenham Hotspur","Tottenham Hotspur FC"]},
+  "fulham":{"home":"Fulham","away":"Newcastle United","time":"2026-11-07T15:00:00Z","homeAliases":["Fulham","Fulham FC"],"awayAliases":["Newcastle","Newcastle United","Newcastle United FC"]},
+  "arsenal":{"home":"Arsenal","away":"Hull City","time":"2026-11-07T15:00:00Z","homeAliases":["Arsenal","Arsenal FC"],"awayAliases":["Hull City"]},
+  "forest":{"home":"Nottingham Forest","away":"Manchester City","time":"2026-11-07T17:30:00Z","homeAliases":["Nottingham Forest","Nottm Forest"],"awayAliases":["Manchester City","Manchester City FC","Man City"]},
+  "sunderland":{"home":"Sunderland","away":"Chelsea","time":"2026-11-08T14:00:00Z","homeAliases":["Sunderland","Sunderland AFC"],"awayAliases":["Chelsea","Chelsea FC"]},
+  "palace":{"home":"Crystal Palace","away":"Liverpool","time":"2026-11-08T14:00:00Z","homeAliases":["Crystal Palace","Crystal Palace FC"],"awayAliases":["Liverpool","Liverpool FC"]},
+  "ipswich":{"home":"Ipswich Town","away":"Bournemouth","time":"2026-11-08T14:00:00Z","homeAliases":["Ipswich","Ipswich Town","Ipswich Town FC"],"awayAliases":["Bournemouth","AFC Bournemouth"]},
+  "brighton":{"home":"Brighton","away":"Brentford","time":"2026-11-08T14:00:00Z","homeAliases":["Brighton","Brighton & Hove Albion","Brighton & Hove Albion FC"],"awayAliases":["Brentford","Brentford FC"]},
+  "united":{"home":"Manchester United","away":"Aston Villa","time":"2026-11-08T16:30:00Z","homeAliases":["Manchester United","Manchester United FC","Man Utd"],"awayAliases":["Aston Villa","Aston Villa FC"]}
+ },
+ "sources":{
+  "two":{"prefix":"https://2up.io/pt-br/sports/soccer/england/premier-league/","rows":[["leeds",[2.75,3.3,2.52],"901881748198350848-leeds-vs-tottenham"],["ipswich",[3.73,3.64,1.9],"901881751738347520-ipswich-vs-bournemouth"],["palace",[5.3,4.3,1.55],"901881751079813120-crystal-palace-vs-liverpool"],["sunderland",[3.6,3.57,1.96],"901881750622662656-sunderland-vs-chelsea"],["forest",[4.44,3.87,1.73],"901881750136123392-nottingham-forest-vs-manchester-city"],["arsenal",[1.16,7.2,17],"901881751847370752-arsenal-vs-hull-city"],["fulham",[2,3.67,3.44],"901881750249340928-fulham-vs-newcastle"]]},
+  "grana":{"prefix":"https://granawin-go.com/br/prematch/football/1008013-inglaterra-premier-league/","rows":[["leeds",[2.85,3.45,2.44],"12095487-leeds-united-tottenham-hotspur"],["arsenal",[1.16,7.6,17],"12095543-arsenal-fc-hull-city"],["fulham",[2.02,3.7,3.5],"12095556-fulham-fc-newcastle-united"],["forest",[4.7,4.1,1.69],"12095527-nottingham-forest-manchester-city"]]},
+  "stake":{"prefix":"https://stake.com/pt/sports/soccer/england/premier-league/","rows":[["leeds",[2.8,3.35,2.41],"1794054600000-leeds-united-tottenham"],["fulham",[1.94,3.7,3.5],"1794063600000-fulham-newcastle"],["arsenal",[1.14,7.6,17],"1794063600000-arsenal-hull-city"],["forest",[4.6,3.95,1.67],"1794072600000-nottingham-forest-manchester-city"],["sunderland",[3.7,3.6,1.87],"1794146400000-sunderland-chelsea"],["palace",[5.4,4.4,1.5],"1794146400000-crystal-palace-liverpool"],["ipswich",[3.8,3.7,1.82],"1794146400000-ipswich-town-bournemouth"],["brighton",[1.82,3.85,3.7],"1794146400000-brighton-brentford"],["united",[2.05,3.65,3.15],"1794155400000-manchester-united-aston-villa"]]},
+  "exclusive":{"prefix":"https://sports2.exclusivebeteu.com/pt/evento/1/fute/ing/inglaterra-premier-league/","rows":[["leeds",[2.73,3.28,2.54],"leeds-tottenham-hotspur/318046511772540928"],["fulham",[1.99,3.6,3.4],"fulham-fc-newcastle-united/318055983236587520"],["arsenal",[1.16,7.5,15],"arsenal-hull-city/318056010200719360"],["forest",[4.33,3.8,1.71],"nottingham-forest-manchester-city-fc/318056136010964992"]]}
+ }
+}
