@@ -5,7 +5,9 @@ import {withRegisteredHouses} from './registered-houses.mjs';
 import {mergeBrowserQuotes,mergeAutomaticQuotes} from './browser-quotes.mjs';
 import {writeFootballApi} from './football-api.mjs';
 import {updateHistory} from './odds-history.mjs';
+import {publishTobetano,mergeTobetano} from './tobetano-integration.mjs';
 const output='pages-dist';
+const tobetano=await publishTobetano(output);
 await fs.mkdir(output+'/data/catalog',{recursive:true});
 try{await fs.copyFile('collector-output/new-houses.json',output+'/data/new-houses.json')}catch(e){if(e.code!=='ENOENT')throw e}
 const saved=new Map();
@@ -19,6 +21,7 @@ for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
  const data=await response.json();
  if(route==='odds'){
   mergeBrowserQuotes(data);mergeAutomaticQuotes(data,newHouses);
+  mergeTobetano(data,tobetano);
   const api=await writeFootballApi(fs,output,data,newHouses);
   const history=updateHistory(previousHistory,api);
   await fs.mkdir('history-state',{recursive:true});
@@ -35,6 +38,9 @@ for(const name of await fs.readdir('worker/catalog-data')){
 }
 await fs.copyFile('worker/archive.json.gz',output+'/coleta-completa.json.gz');
 let html=withRegisteredHouses(await fs.readFile('worker/page.html','utf8'));
+html=html.replace("fortune:'FortuneJack'","fortune:'FortuneJack',tobetano:'Tobetano'")
+ .replace('<th>FortuneJack</th>','<th>FortuneJack</th><th>Tobetano</th>')
+ .replace('<option value="fortune">FortuneJack</option>','<option value="fortune">FortuneJack</option><option value="tobetano">Tobetano</option>');
 html=html.replace("fetch('/api/odds')","fetch('data/odds.json?t='+Date.now())")
  .replace("fetch('/api/catalog?v=2',","fetch('data/catalog/index.json',")
  .replace("fetch('/api/catalog?sport='+encodeURIComponent(sport)+'&v=2',","fetch('data/catalog/'+encodeURIComponent(sport)+'.json',")
@@ -54,6 +60,11 @@ await fs.writeFile(output+'/api.html','<!doctype html><html lang="pt-BR"><meta c
 html=html.replace('<body>','<body><a href="api.html" style="display:block;padding:10px 20px;color:#7dd3fc;background:#101827">API de futebol · dados organizados e documentação ↗</a>');
 await fs.writeFile(output+'/index.html',html);
 await fs.copyFile('worker/history.js',output+'/history.js');
+await fs.copyFile('worker/tobetano.js',output+'/tobetano.js');
+let apiPage=await fs.readFile(output+'/api.html','utf8');
+apiPage=apiPage.replace('</ul>','<li><a style="color:#7dd3fc" href="api/v1/tobetano/index.json">Tobetano · todos os mercados de futebol pré-jogo</a></li></ul>');
+await fs.writeFile(output+'/api.html',apiPage);
+html=html.replace('</body>','<script src="tobetano.js?v=1"></script></body>');
 html=html.replace('</body>','<script src="history.js?v=2"></script></body>');
 await fs.writeFile(output+'/index.html',html);
 await fs.writeFile(output+'/.nojekyll','');

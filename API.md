@@ -15,7 +15,19 @@ Esta versão distribui snapshots JSON estáticos, sem chave, gerados pela coleta
 | history.json | Séries de cotações automáticas observadas nas últimas 72 horas |
 | movement-alerts.json | Movimentos de pelo menos 20% registrados na janela |
 
-Outros códigos de casa: `esporte`, `melbet`, `jogos`, `futamina`, `two`, `grana`, `sportsbet`, `exclusive`, `stake`, `fortune`.
+Outros códigos de casa: `esporte`, `melbet`, `jogos`, `futamina`, `two`, `grana`, `sportsbet`, `exclusive`, `stake`, `fortune`, `tobetano`.
+
+## Tobetano: todos os mercados de futebol pré-jogo
+
+`tobetano/index.json` lista os jogos e aponta `events[].file` para o JSON completo de cada partida, relativo a `api/v1/tobetano/`. Exemplo: `api/v1/tobetano/events/18904011.json`. Este catálogo é separado do conjunto comparativo `football.json`, que continua restrito a resultado final. A aba **Tobetano · futebol** permite buscar e consultar os mercados por partida, período e linha.
+
+O coletor consulta todos os campeonatos de futebol pré-jogo retornados pelo feed público do iframe, depois todos os eventos e mercados retornados por partida. Não limita a 24 horas nem aos campeonatos principais. Exclui eventos ao vivo, já iniciados, com início passado e cybersport. Revalida o evento antes de obter os mercados. Falhas por pedido aparecem em `failures`; as contagens variam a cada execução e não comprovam a existência de mercados que o provedor não retornou.
+
+Os arquivos por jogo preservam `event`, `observedAt`, `sourceUrl` e `markets`. Cada chave de mercado mantém `eventId`, `resultKind`, `marketType`, `period`, `subPeriod` e `layout` quando presentes; as linhas ficam em `marketItems[].key.marketParameters` e as seleções em `outcomes[].key.type/values`. Não colapsar resultado, período, linha ou valores: gols, escanteios, cartões, jogadores e subperíodos podem ter códigos diferentes mesmo com nome parecido.
+
+`outcomes[].decimalOdds` converte o inteiro do feed (`odd / 100`), validado contra a interface pública. O valor original `odd` também é preservado. `isFrozen` e `event.tradingStatus` identificam suspensão; as contagens incluem suspensas. Os nomes e modelos de tradução originais estão em `tobetano/translations.json`; alguns modelos têm parâmetros e códigos que exigem contexto adicional, por isso a interface preserva esses identificadores em vez de inventar seleções.
+
+Somente resultado final regulamentar (`resultKind=1`, `marketType=2`, `period=0`, sem subperíodo ou layout alternativo) com três seleções abertas entra na comparação entre casas e no histórico de 72h. O catálogo completo dos outros mercados representa a última coleta, não histórico de 72h de todos esses mercados. O iframe publica o identificador do seu SDK na configuração inicial; o coletor o lê a cada execução e não usa login, saldo ou token de usuário.
 
 ## Contrato
 

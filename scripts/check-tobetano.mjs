@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {convertMarkets,finalOdds,eligiblePrematch} from './tobetano-feed.mjs';
+import {mergeTobetano} from './tobetano-integration.mjs';
+const key={eventId:'1',resultKind:1,marketType:2,period:0};
+const value={marketItems:[{key:{marketParameters:[]},outcomes:[{key:{type:3,values:[]},odd:1900,isFrozen:false},{key:{type:0,values:[]},odd:114,isFrozen:false},{key:{type:1,values:[]},odd:819,isFrozen:false}]}]};
+const converted=convertMarkets([{key,value},{key:{...key,period:1},value},{key:{...key,period:1,subPeriod:15},value},{key:{...key,resultKind:4},value},{key,value,isRemoved:true}]);
+assert.equal(converted.length,4);assert.deepEqual(finalOdds(converted),[1.14,8.19,19]);
+assert.equal(finalOdds(converted.slice(1)),null);
+const frozen=structuredClone(converted);frozen[0].marketItems[0].outcomes[0].isFrozen=true;assert.equal(finalOdds(frozen),null);
+assert.equal(convertMarkets([{key,value:frozen[0]}])[0].marketItems[0].outcomes[0].isFrozen,true);
+const now=Date.now(),event={sport:'F',stage:1,status:0,startTime:(now+86400000)/1000};
+assert(eligiblePrematch(event,now));assert(!eligiblePrematch({...event,stage:2},now));assert(!eligiblePrematch({...event,status:1},now));assert(!eligiblePrematch({...event,isCybersport:true},now));assert(!eligiblePrematch({...event,startTime:(now-1)/1000},now));
+const row={home:'Arsenal FC',away:'Hull',time:new Date(now+86400000).toISOString(),odds:[1.14,8.19,19],at:new Date(now).toISOString()};
+const data={sources:[],games:[{...row,books:{giro:{odds:[1.1,8,18]}}}]};
+mergeTobetano(data,{ok:true,at:row.at,partial:false,records:[row]});assert.equal(data.games.length,1);assert.equal(data.games[0].books.tobetano.at,row.at);assert.equal(data.games[0].books.giro.odds[0],1.1);
+console.log('Tobetano: decimal scale, 1X2 selection order, market/period isolation, frozen odds and live exclusion OK');

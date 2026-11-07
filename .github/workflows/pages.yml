@@ -16,7 +16,7 @@ concurrency:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -30,6 +30,7 @@ jobs:
       - run: npm test
       - run: node scripts/check-public-parser.mjs
       - run: node scripts/collect-public-houses.mjs
+      - run: node scripts/collect-tobetano.mjs
       - name: Restaurar histórico persistido
         uses: actions/github-script@v7
         with:

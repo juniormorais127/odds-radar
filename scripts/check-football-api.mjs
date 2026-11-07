@@ -6,7 +6,7 @@ const game={home:'A',away:'B',time:'2026-11-08T12:00:00Z',books:{giro:book(),sta
 const data={games:[game,{...game,time:'2026-11-06T12:00:00Z'}],sources:[]};
 const result=footballApi(data,{sources:[{key:'stake',ok:false,at:'2026-11-07T12:00:00Z',error:'HTTP 403'}]},now);
 assert.equal(result.events.length,1);assert.equal(result.quotes.length,9);
-assert.equal(result.bookmakers.length,11);
+assert.equal(result.bookmakers.length,12);
 assert.equal(result.bookmakers.find(b=>b.id==='stake').collectionStatus,'failed');
 assert(result.quotes.filter(q=>q.bookmakerId==='stake').every(q=>q.freshness==='historical'&&q.method==='browser_manual'));
 assert(result.quotes.filter(q=>q.bookmakerId==='futamina').every(q=>q.freshness==='historical'));
