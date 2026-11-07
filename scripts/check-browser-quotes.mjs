@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {mergeBrowserQuotes,browserRecords,browserSnapshot} from './browser-quotes.mjs';
-const records=browserRecords();assert.equal(records.length,24);
-assert.equal(new Set(records.map(r=>r.house)).size,4);
+const records=browserRecords();assert.equal(records.length,33);
+assert.equal(new Set(records.map(r=>r.house)).size,5);
+assert.equal(records.find(r=>r.house==='sportsbet').at,'2026-11-07T01:29:00Z');
 const data={games:[{home:'Nottm Forest',away:'Man City',time:'2026-11-07T17:30:00Z',books:{melbet:{odds:[4,4,2]}}}],sources:[]};
 mergeBrowserQuotes(data,browserSnapshot,Date.parse(browserSnapshot.at));
 assert.equal(data.games[0].books.two.odds[0],4.44);
@@ -15,4 +16,4 @@ assert.equal(duplicated.games.filter(g=>g.time==='2026-11-07T17:30:00Z').length,
 assert.ok(duplicated.games[0].books.melbet&&duplicated.games[0].books.giro&&duplicated.games[0].books.two);
 const isolated={games:[{home:'Nottm Forest',away:'Man City',time:'2026-11-21T17:30:00Z',books:{}}],sources:[]};mergeBrowserQuotes(isolated,browserSnapshot,Date.parse(browserSnapshot.at));
 assert.deepEqual(isolated.games[0].books,{});
-console.log('Verified 24 timestamped browser records, exact aliases, kickoff isolation and preserved snapshot age.');
+console.log('Verified 33 browser records from five houses, per-source timestamps, exact aliases and kickoff isolation.');
