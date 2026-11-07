@@ -1,4 +1,4 @@
-export function parsePublicOdds(house,text){
+export function parsePublicOdds(house,text,namesOverride){
  const lines=text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
  const price=s=>/^\d+(?:[.,]\d+)?$/.test(s||'')?Number(s.replace(',','.')):NaN;
  const valid=a=>a.length===3&&a.every(n=>Number.isFinite(n)&&n>1);
@@ -10,7 +10,7 @@ export function parsePublicOdds(house,text){
   const odds=[price(b[i+2]),price(b[i+4]),price(b[i+6])];
   return i>=0&&b[i+1]==='1'&&b[i+3]==='X'&&b[i+5]==='2'&&valid(odds)?[mk('Nottingham Forest','Manchester City',odds)]:[];
  }
- const names={grana:['Kigezi Homeboys','Mbarara City'],sportsbet:['Kigezi Homeboyz FC','Mbarara FC'],exclusive:['Kigezi Homeboys','Mbarara City FC'],stake:['Toulouse FC','Strasbourg Alsace'],fortune:['Instituto AC Cordoba','Newell´s Old Boys']}[house];
+ const names=namesOverride||{grana:['Kigezi Homeboys','Mbarara City'],sportsbet:['Kigezi Homeboyz FC','Mbarara FC'],exclusive:['Kigezi Homeboys','Mbarara City FC'],stake:['Toulouse FC','Strasbourg Alsace'],fortune:['Instituto AC Cordoba','Newell´s Old Boys']}[house];
  if(!names)return [];
  const [home,away]=names;
  if(!text.includes(home)||!text.includes(away))return [];

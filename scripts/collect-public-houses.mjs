@@ -10,7 +10,9 @@ try{await Promise.all(Array.from({length:2},async()=>{while(index<registry.house
  const source={key:house.key,at:null,ok:false,records:[],method:'Navegador público sem login',url:house.url};
  try{
   // Use the public sportsbook origin exposed by the embedded page; no session or auth credentials.
-  const url=house.key==='exclusive'?house.url.replace('https://exclusivebeteu.com/sports/betting/','https://sports2.exclusivebeteu.com/pt/'):house.url;
+  const publicUrl=house.collectionUrl||house.url;
+  const url=house.key==='exclusive'?publicUrl.replace('https://exclusivebeteu.com/sports/betting/','https://sports2.exclusivebeteu.com/pt/'):publicUrl;
+  source.url=url;
   const r=await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
   if(r&&r.status()>=400)throw Error('HTTP '+r.status()+' na página pública');
   const deadline=Date.now()+30000;
@@ -18,7 +20,7 @@ try{await Promise.all(Array.from({length:2},async()=>{while(index<registry.house
    let text=await page.locator('body').innerText({timeout:4000});
    if(/just a moment|verify you are human|checking your browser|access denied/i.test(text))throw Error('Desafio ou restrição de acesso; coleta interrompida');
    if(house.key==='exclusive'){for(const frame of page.frames().slice(1)){try{text+='\n'+await frame.locator('body').innerText({timeout:1500})}catch{}}}
-   const records=parsePublicOdds(house.key,text);
+   const records=parsePublicOdds(house.key,text,house.watch);
    if(records.length){source.records=records;source.ok=true;break}
    await page.waitForTimeout(2000);
   }
