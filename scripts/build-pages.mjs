@@ -35,7 +35,7 @@ html=html.replace("fetch('/api/odds')","fetch('data/odds.json?t='+Date.now())")
  .replace('Coleta antiga ou indisponível. Atualize as odds para calcular oportunidades atuais.','Coleta antiga ou indisponível. Use “Coletar novas odds no GitHub”, clique em “Run workflow” e aguarde a publicação. Depois recarregue os dados aqui.')
  .replace('Atualize para procurar oportunidades','Inicie uma nova coleta no GitHub')
  .replace('A atualização é manual, com cache de até 60 segundos.','Nesta versão GitHub Pages, uma nova coleta precisa ser executada pelo GitHub Actions. O botão Recarregar dados publicados apenas lê o último arquivo disponível.');
-html=html.replace('<body>','<body><div style="padding:10px 20px;background:#17263c;color:#dce6f4;font:14px system-ui">GitHub Pages · coleta automática a cada hora, sujeita a atrasos. Para coletar agora: abra “Coletar novas odds no GitHub” → “Run workflow” → botão verde “Run workflow”. É preciso estar conectado à conta dona do repositório. Quando a execução terminar, clique em “Recarregar dados publicados”.</div>');
+html=html.replace('<body>','<body><div style="padding:10px 20px;background:#17263c;color:#dce6f4;font:14px system-ui">GitHub Pages · coleta automática a cada 30 minutos, sujeita a atrasos. Para coletar agora: abra “Coletar novas odds no GitHub” → “Run workflow” → botão verde “Run workflow”. É preciso estar conectado à conta dona do repositório. Quando a execução terminar, clique em “Recarregar dados publicados”.</div>');
 if(html.includes("fetch('/api/"))throw Error('Restou API dinâmica na página estática');
 await fs.writeFile(output+'/index.html',html);
 await fs.writeFile(output+'/.nojekyll','');
