@@ -54,6 +54,6 @@ await fs.writeFile(output+'/api.html','<!doctype html><html lang="pt-BR"><meta c
 html=html.replace('<body>','<body><a href="api.html" style="display:block;padding:10px 20px;color:#7dd3fc;background:#101827">API de futebol · dados organizados e documentação ↗</a>');
 await fs.writeFile(output+'/index.html',html);
 await fs.copyFile('worker/history.js',output+'/history.js');
-html=html.replace('</body>','<script src="history.js"></script></body>');
+html=html.replace('</body>','<script src="history.js?v=2"></script></body>');
 await fs.writeFile(output+'/index.html',html);
 await fs.writeFile(output+'/.nojekyll','');

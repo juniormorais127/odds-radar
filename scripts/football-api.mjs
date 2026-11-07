@@ -26,7 +26,7 @@ export function footballApi(data,collection,now=Date.now()){
 export async function writeFootballApi(fs,output,data,collection){
  const api=footballApi(data,collection),base=output+'/api/v1';await fs.mkdir(base+'/bookmakers',{recursive:true});
  const meta={schemaVersion:api.schemaVersion,generatedAt:api.generatedAt,coverage:api.coverage};
- const files={'index.json':{...meta,oddsFormat:api.oddsFormat,freshnessWindowSeconds:api.freshnessWindowSeconds,counts:{events:api.events.length,quotes:api.quotes.length},endpoints:{events:'events.json',quotes:'quotes.json',bookmakers:'bookmakers.json',football:'football.json'}},'football.json':api,'events.json':{...meta,events:api.events},'quotes.json':{...meta,quotes:api.quotes},'bookmakers.json':{...meta,bookmakers:api.bookmakers}};
+ const files={'index.json':{...meta,oddsFormat:api.oddsFormat,freshnessWindowSeconds:api.freshnessWindowSeconds,counts:{events:api.events.length,quotes:api.quotes.length},endpoints:{events:'events.json',quotes:'quotes.json',bookmakers:'bookmakers.json',football:'football.json',history:'history.json',movementAlerts:'movement-alerts.json'}},'football.json':api,'events.json':{...meta,events:api.events},'quotes.json':{...meta,quotes:api.quotes},'bookmakers.json':{...meta,bookmakers:api.bookmakers}};
  for(const [name,body] of Object.entries(files))await fs.writeFile(base+'/'+name,JSON.stringify(body));
  for(const bookmaker of api.bookmakers)await fs.writeFile(base+'/bookmakers/'+bookmaker.id+'.json',JSON.stringify({...meta,bookmaker,quotes:api.quotes.filter(q=>q.bookmakerId===bookmaker.id)}));
  return api;
