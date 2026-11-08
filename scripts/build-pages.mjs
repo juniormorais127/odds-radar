@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import {analyzePrematch} from './opportunities.mjs';
 import {gunzipSync} from 'node:zlib';
 import app from '../worker/index.js';
 import {withRegisteredHouses} from './registered-houses.mjs';
@@ -26,6 +27,7 @@ for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
   mergeTobetano(data,tobetano);
   mergeExtraHouses(data,extraHouses);
   const api=await writeFootballApi(fs,output,data,newHouses);
+  await fs.writeFile(output+'/api/v1/opportunities.json',JSON.stringify({generatedAt:api.generatedAt,live:{sourceAt:null},prematch:{sourceAt:api.quotes.filter(q=>q.method==='automatic').map(q=>q.observedAt).filter(Boolean).sort().at(-1)||null},signals:analyzePrematch(api)}));
   const history=updateHistory(previousHistory,api);
   await fs.mkdir('history-state',{recursive:true});
   await fs.writeFile('history-state/history.json',JSON.stringify(history));
@@ -41,6 +43,7 @@ for(const name of await fs.readdir('worker/catalog-data')){
 }
 await fs.copyFile('worker/archive.json.gz',output+'/coleta-completa.json.gz');
 let html=withRegisteredHouses(await fs.readFile('worker/page.html','utf8'));
+html=html.replace('</nav>','<a href="opportunities.html" style="padding:12px 2px;text-decoration:none">Oportunidades / Possíveis desajustes</a></nav>');
 html=html.replace('</nav>','<a href="http://127.0.0.1:4180/" target="_blank" rel="noopener" style="padding:12px 2px;text-decoration:none">Ao vivo · 20s (neste PC) ↗</a></nav>');
 html=html.replace("fortune:'FortuneJack'","fortune:'FortuneJack',tobetano:'Tobetano'")
  .replace('<th>FortuneJack</th>','<th>FortuneJack</th><th>Tobetano</th>')
@@ -71,4 +74,5 @@ await fs.writeFile(output+'/api.html',apiPage);
 html=html.replace('</body>','<script src="tobetano.js?v=1"></script></body>');
 html=html.replace('</body>','<script src="history.js?v=3"></script></body>');
 await fs.writeFile(output+'/index.html',html);
+await fs.copyFile('worker/opportunities.html',output+'/opportunities.html');
 await fs.writeFile(output+'/.nojekyll','');
