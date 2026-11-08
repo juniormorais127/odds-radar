@@ -1,5 +1,13 @@
 # API de futebol v1
 
+## Coletor local ao vivo · 20 segundos
+
+Execute `Iniciar-Ao-Vivo.ps1` neste PC. Ele inicia Node em segundo plano na porta de loopback 4180; o painel local fica em http://127.0.0.1:4180/ e a API em http://127.0.0.1:4180/api/live. `GET /api/live?eventId=ID` filtra um jogo; `GET /api/live/status` informa ciclo, última coleta, próxima tentativa, erros, contagens e `stale`. Os dados incluem evento, placar, período, horário de observação e todos os mercados ao vivo retornados pela Tobetano. São separados do catálogo pré-jogo.
+
+O robô consulta a cada 20 segundos, sem sobrepor ciclos. Consultas lentas podem alongar o intervalo; após falha, preserva o último snapshot como antigo e reconecta. Depois de 40 segundos sem coleta válida, os dados são marcados como antigos. Jogos encerrados e cybersport são excluídos; odds suspensas ficam sinalizadas. O PC precisa permanecer ligado e conectado, mas o navegador pode ficar fechado. A API só aceita conexões deste PC e não é exposta à internet.
+
+O snapshot local fica em `data/live/latest.json`. As mudanças de preço, com contexto de placar, ficam em `data/live/history/` por hora; arquivos cuja janela terminou há mais de 72 horas são removidos durante a coleta. A retenção técnica pode alcançar até uma hora além da janela pelo particionamento. Movimentos ao vivo não comprovam erro de preço: gols e passagem do tempo mudam as probabilidades. Esses dados locais não atualizam a API pública estática do GitHub a cada 20 segundos. `Parar-Ao-Vivo.ps1` encerra somente o processo identificado como este robô.
+
 Base pública: https://juniormorais127.github.io/odds-radar/api/v1/
 
 Esta versão distribui snapshots JSON estáticos, sem chave, gerados pela coleta do GitHub Actions a cada 30 minutos, sujeita a atrasos. Não é um servidor de consultas em tempo real. Parâmetros na URL não filtram os arquivos; filtre no consumidor.

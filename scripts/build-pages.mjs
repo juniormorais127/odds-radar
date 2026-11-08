@@ -38,6 +38,7 @@ for(const name of await fs.readdir('worker/catalog-data')){
 }
 await fs.copyFile('worker/archive.json.gz',output+'/coleta-completa.json.gz');
 let html=withRegisteredHouses(await fs.readFile('worker/page.html','utf8'));
+html=html.replace('</nav>','<a href="http://127.0.0.1:4180/" target="_blank" rel="noopener" style="padding:12px 2px;text-decoration:none">Ao vivo · 20s (neste PC) ↗</a></nav>');
 html=html.replace("fortune:'FortuneJack'","fortune:'FortuneJack',tobetano:'Tobetano'")
  .replace('<th>FortuneJack</th>','<th>FortuneJack</th><th>Tobetano</th>')
  .replace('<option value="fortune">FortuneJack</option>','<option value="fortune">FortuneJack</option><option value="tobetano">Tobetano</option>');
