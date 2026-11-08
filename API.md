@@ -94,6 +94,8 @@ O estado é restaurado do artefato `odds-history-v1` do GitHub Actions e salvo n
 
 ## Acompanhamento local por seleção
 
+Robôs locais usam intervalo-alvo de 30 segundos no pré-jogo e 20 segundos no ao vivo Tobetano. Cada casa tem agendamento próprio, com até três coletas pré-jogo simultâneas. Coletas demoradas e fila podem ampliar o intervalo, sem sobreposição. Falhas aguardam 3 minutos; bloqueios aguardam 30 minutos. O supervisor reinicia o servidor caso o processo encerre. O PC precisa permanecer ligado e conectado; esta rotina não consome tokens de IA.
+
 No painel local, escolha a partida, o período e uma opção no filtro Seleção (Casa, Empate, Fora, totais ou dupla chance). Use Acompanhar para abrir gráfico e variações da mesma casa, jogo, mercado, período, linha e seleção. O histórico local mantém 72 horas em SQLite, importando os registros anteriores disponíveis.
 
 `http://127.0.0.1:4180/api/live/history?seriesId=ID&hours=72&limit=15000` consulta uma série identificada em cada outcome de `/api/live`. A janela aceita até 72 horas. Coletas não observadas não são reconstruídas. O painel público também permite filtrar Casa, Empate ou Fora no histórico pré-jogo.

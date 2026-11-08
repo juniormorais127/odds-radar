@@ -1,4 +1,10 @@
 ﻿$taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$supervisorFile = Join-Path $taskRoot 'data/live/supervisor.pid'
+if (Test-Path -LiteralPath $supervisorFile) {
+    $supervisorId = [int](Get-Content -LiteralPath $supervisorFile)
+    $supervisor = Get-CimInstance Win32_Process -Filter "ProcessId=$supervisorId" -ErrorAction SilentlyContinue
+    if ($supervisor -and $supervisor.CommandLine -like '*Supervisionar-Robos.ps1*') { Stop-Process -Id $supervisorId }
+}
 $pidFile = Join-Path $taskRoot 'data/live/process.pid'
 if (-not (Test-Path -LiteralPath $pidFile)) { Write-Output 'Nenhum PID do robô salvo.'; exit }
 $liveProcessId = [int](Get-Content -LiteralPath $pidFile)

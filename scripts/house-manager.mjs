@@ -3,7 +3,7 @@ import {adapters,HOUSE_NAMES} from './house-adapters.mjs';
 import {matching} from '../worker/backend.js';
 import {footballApi} from './football-api.mjs';
 export function createHouseManager(directory,onUpdate=()=>{}){
- const states=new Map(Object.entries(HOUSE_NAMES).map(([id,name])=>[id,{id,name,status:'waiting',pending:false,lastAttemptAt:null,lastSuccessAt:null,nextRunAt:null,error:null,partial:true,games:[],intervalSeconds:['two','sportsbet','stake','fortune'].includes(id)?1800:id==='exclusive'?300:180}]));
+ const states=new Map(Object.entries(HOUSE_NAMES).map(([id,name])=>[id,{id,name,status:'waiting',pending:false,lastAttemptAt:null,lastSuccessAt:null,nextRunAt:null,error:null,partial:true,games:[],intervalSeconds:['two','sportsbet','stake','fortune'].includes(id)?1800:30}]));
  let active=0,queue=[],stopped=false;
  const status=()=>[...states.values()].map(({games,documents,...s})=>({...s,gameCount:games.length,quoteCount:games.length*3,scope:s.note||'Futebol pré-jogo, resultado final. Ao vivo é separado.'}));
  async function run(id){const state=states.get(id);if(stopped||state.pending)return;state.pending=true;state.status='collecting';state.lastAttemptAt=new Date().toISOString();state.nextRunAt=null;onUpdate();
@@ -14,7 +14,7 @@ export function createHouseManager(directory,onUpdate=()=>{}){
    for(const file of await fs.readdir(history)){if(/^\d{4}-\d{2}-\d{2}T\d{2}\.jsonl$/.test(file)&&Date.parse(file.slice(0,13)+':00:00Z')+3600000<Date.now()-72*3600000)await fs.unlink(history+'/'+file)}
    state.games=result.games;state.documents=result.favouriteDocuments||[];state.lastSuccessAt=at;state.status=result.offline?'historical':'success';state.partial=!!result.partial;state.note=result.note||null;state.error=null;}
   catch(e){state.error=e.message;state.status=/403|challenge|captcha/i.test(e.message)?'blocked':'failed'}
-  finally{state.pending=false;state.nextRunAt=new Date(Date.now()+state.intervalSeconds*1000).toISOString();await fs.mkdir(directory,{recursive:true});await fs.writeFile(directory+'/'+id+'.json',JSON.stringify(state));onUpdate();if(!stopped)setTimeout(()=>enqueue(id),state.intervalSeconds*1000)}
+  finally{state.pending=false;const delayMs=state.status==='blocked'?1800000:state.status==='failed'?180000:Math.max(1000,state.intervalSeconds*1000-(Date.now()-Date.parse(state.lastAttemptAt)));state.nextRunAt=new Date(Date.now()+delayMs).toISOString();try{await fs.mkdir(directory,{recursive:true});await fs.writeFile(directory+'/'+id+'.json',JSON.stringify(state))}finally{onUpdate();if(!stopped)setTimeout(()=>enqueue(id),delayMs)}}
  }
  function enqueue(id){if(!queue.includes(id)&&!states.get(id).pending)queue.push(id);pump()}
  function pump(){while(!stopped&&active<3&&queue.length){const id=queue.shift();active++;run(id).catch(e=>console.error('Falha ao salvar robô '+id+': '+e.message)).finally(()=>{active--;pump()})}}
