@@ -3,7 +3,7 @@ export function priceRows(snapshot){
  const prices=new Map();
  for(const game of snapshot.events||[])for(const market of game.markets||[])for(const item of market.marketItems||[])for(const o of item.outcomes||[]){
   if(o.isFrozen||game.event.tradingStatus!==1||!(o.decimalOdds>1))continue;
-  const key=JSON.stringify([game.id,market.key,item.key,o.key]);prices.set(key,{eventId:game.id,market:market.key,line:item.key,selection:o.key,price:o.decimalOdds,scoreboard:game.event.scoreboard});
+  const key=JSON.stringify([game.id,market.key,item.key,o.key]);prices.set(key,{eventId:game.id,bookmakerId:game.bookmakerId||'tobetano',market:market.key,line:item.key,selection:o.key,price:o.decimalOdds,scoreboard:game.event.scoreboard});
  }
  return prices;
 }

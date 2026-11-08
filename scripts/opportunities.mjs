@@ -1,4 +1,20 @@
 export const LIMITS={maxFinal:1.6,minHalf:3,prematchMaxAgeMs:300000,liveMaxAgeMs:40000};
+import {matching} from '../worker/backend.js';
+export function analyzeLiveComparisons(snapshot,now=Date.now()){
+ const groups=[];
+ for(const g of snapshot.events||[]){if(!fresh(g.observedAt,40000,now)||g.event.stage!==2||g.event.tradingStatus!==1)continue;
+  const score=g.event.scoreboard?.scores?.find(s=>s.periodScoreType===1&&s.period===1&&s.subPeriod==null&&!s.isRemoved)?.score;
+  const odds=getPrices(g.markets,0);if(!score||!odds?.every(o=>o>1))continue;
+  const e={home:g.event.competitors?.[0]?.name,away:g.event.competitors?.[1]?.name,time:new Date(g.event.startTime*1000).toISOString()};if(!e.home||!e.away)continue;
+  let group=groups.find(p=>p.score===score&&matching(p.event,e)&&Math.abs(Date.parse(p.at)-Date.parse(g.observedAt))<=10000);
+  if(!group){group={event:e,score,at:g.observedAt,rows:[]};groups.push(group)}group.rows.push(g);
+ }
+ const signals=[];for(const g of groups){const rows=g.rows.filter(r=>r.bookmakerId!=='futamina'||!g.rows.some(x=>x.bookmakerId==='giro'));if(new Set(rows.map(r=>r.bookmakerId)).size<2)continue;
+  const picks=[0,1,2].map((side)=>rows.map(r=>({bookmakerId:r.bookmakerId,selection:['home','draw','away'][side],selectionLabel:side===0?'Casa ('+g.event.home+')':side===1?'Empate':'Fora ('+g.event.away+')',selectionName:side===0?g.event.home:side===1?'Empate':g.event.away,decimalOdds:getPrices(r.markets,0)[side],observedAt:r.observedAt,sourceUrl:r.sourceUrl||null})).sort((a,b)=>b.decimalOdds-a.decimalOdds)[0]);
+  const profitPercent=(1/picks.reduce((n,p)=>n+1/p.decimalOdds,0)-1)*100;
+  if(profitPercent>0.1&&new Set(picks.map(p=>p.bookmakerId)).size>=2)signals.push({id:'live|surebet|'+g.event.home+'|'+g.event.away,mode:'live',type:'surebet_candidate',event:g.event.home+' × '+g.event.away,picks,profitPercent,observedAt:picks.map(p=>p.observedAt).sort()[0],scoreboard:{scores:[{periodScoreType:1,period:1,score:g.score}]},note:'Possível surebet ao vivo: placar compatível, resultado final 90 minutos e coletas com até 10s de diferença. Aceitação e regras não confirmadas; preços podem mudar.'});
+ }return signals;
+}
 const fresh=(at,maxAge,now)=>Number.isFinite(Date.parse(at))&&now>=Date.parse(at)&&now-Date.parse(at)<=maxAge;
 const getPrices=(markets,period)=>{
  const market=markets.find(m=>m.key.resultKind===1&&m.key.marketType===2&&m.key.period===period&&m.key.subPeriod==null&&m.key.layout==null);

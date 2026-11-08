@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';import os from 'node:os';import path from 'node:path';
+import {parseFootballLive,parseMelbetLive} from './live-houses.mjs';
+import {LiveLifecycle} from './live-lifecycle.mjs';
+import {LiveHistory} from './live-history.mjs';
+import {analyzeLiveComparisons} from './opportunities.mjs';
+const now=Date.now(),start=now-600000;
+const source={events:[{id:'a',sport:'football',home:{name:'A'},away:{name:'B'},league:{name:'League'},startsAt:new Date(start).toISOString(),live:{home:1,away:0},markets:[{name:'Resultado final',outcomes:['home','draw','away'].map((key,i)=>({key,odds:[2.3,4,4][i]}))}]}]};
+const giro=parseFootballLive(source,'giro','https://girocerto.io')[0];assert(giro);assert.equal(giro.event.scoreboard.scores[0].score,'1-0');
+const suspended=structuredClone(source);suspended.events[0].markets[0].suspended=true;assert.equal(parseFootballLive(suspended,'giro','https://girocerto.io').length,0);
+const mel=parseMelbetLive({Success:true,Value:[{I:2,SI:1,O1:'A',O2:'B',S:start/1000,SC:{FS:{S1:1,S2:0}},E:[1,2,3].map((T,i)=>({G:1,T,C:[2,4.5,4.5][i]}))} ]})[0];assert(mel);
+const at=new Date(now).toISOString();giro.observedAt=mel.observedAt=at;
+assert.equal(analyzeLiveComparisons({events:[giro,mel]},now).length,1);
+const different=structuredClone(mel);different.event.scoreboard.scores[0].score='0-0';assert.equal(analyzeLiveComparisons({events:[giro,different]},now).length,0);
+const old=structuredClone(mel);old.observedAt=new Date(now-11000).toISOString();assert.equal(analyzeLiveComparisons({events:[giro,old]},now).length,0);
+const sameFeed=structuredClone(mel);sameFeed.bookmakerId='futamina';assert.equal(analyzeLiveComparisons({events:[giro,sameFeed]},now).length,0);
+const temp=fs.mkdtempSync(path.join(os.tmpdir(),'radar-lifecycle-'));try{const lifecycle=new LiveLifecycle(path.join(temp,'events.json'));giro.bookmakerId='tobetano';lifecycle.observe(giro,now);assert.equal(lifecycle.missing([],now)[0].lifecycle,'unavailable');assert.equal(lifecycle.expire(now+86400001).length,0);
+const end=structuredClone(giro);end.event.scoreboard.stage=9;lifecycle.observe(end,now);lifecycle.observe(end,now+60000);assert.equal(lifecycle.missing([],now+1)[0].finishedAt,at);assert.equal(lifecycle.expire(now+86400000).length,1);lifecycle.save();assert.equal(new LiveLifecycle(path.join(temp,'events.json')).rows.size,0);
+const history=new LiveHistory(path.join(temp,'history.sqlite'));history.attach({events:[giro]});const id=giro.markets[0].marketItems[0].outcomes[0].seriesId;assert(history.get(id,72,100,now).stats.count>0);history.deleteEvent(giro.id);assert.equal(history.get(id,72,100,now).stats.count,0);history.close();
+}finally{fs.rmSync(temp,{recursive:true,force:true})}
+console.log('Multi-house live: 1X2 mapping, suspension, score/time isolation, shared-feed exclusion, confirmed finish and 24h deletion OK');

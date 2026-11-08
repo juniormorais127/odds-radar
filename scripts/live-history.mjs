@@ -11,11 +11,12 @@ export function liveSeriesId(row){
 export function compactScore(scoreboard){return {score:scoreboard?.scores?.find(s=>s.periodScoreType===1&&s.period===1&&!s.isRemoved)?.score??null,stage:scoreboard?.stage??null,seconds:scoreboard?.timer?.currentTimeSeconds??null};}
 export class LiveHistory {
  constructor(file){this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS series(id TEXT PRIMARY KEY, event_id TEXT, metadata TEXT); CREATE TABLE IF NOT EXISTS points(series_id TEXT, at TEXT, odd REAL, context TEXT, PRIMARY KEY(series_id,at)); CREATE INDEX IF NOT EXISTS points_time ON points(at); CREATE TABLE IF NOT EXISTS imports(name TEXT PRIMARY KEY, size INTEGER);');
+  this.db.exec('CREATE TABLE IF NOT EXISTS expired_events(event_id TEXT PRIMARY KEY, at TEXT)');
   this.insert=this.db.prepare('INSERT OR IGNORE INTO points VALUES(?,?,?,?)');this.meta=this.db.prepare('INSERT INTO series VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET event_id=excluded.event_id,metadata=excluded.metadata');
   this.current=new Map();this.seed=this.db.prepare('INSERT INTO points SELECT ?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM points WHERE series_id=?)');
  }
  append(rows,now=Date.now()){
-  this.db.exec('BEGIN');try{for(const r of rows){const price=r.after??r.price,at=r.at;if(!Number.isFinite(price)||price<=1||!Number.isFinite(Date.parse(at))||Date.parse(at)<now-72*3600000||Date.parse(at)>now)continue;this.insert.run(liveSeriesId(r),new Date(at).toISOString(),price,JSON.stringify(compactScore(r.scoreboard)))}this.db.exec('COMMIT')}catch(e){this.db.exec('ROLLBACK');throw e}
+  this.db.exec('BEGIN');try{for(const r of rows){if(this.db.prepare('SELECT 1 FROM expired_events WHERE event_id=?').get(String(r.eventId)))continue;const price=r.after??r.price,at=r.at;if(!Number.isFinite(price)||price<=1||!Number.isFinite(Date.parse(at))||Date.parse(at)<now-72*3600000||Date.parse(at)>now)continue;this.insert.run(liveSeriesId(r),new Date(at).toISOString(),price,JSON.stringify(compactScore(r.scoreboard)))}this.db.exec('COMMIT')}catch(e){this.db.exec('ROLLBACK');throw e}
  }
  attach(snapshot){
   this.current.clear();
@@ -28,6 +29,7 @@ export class LiveHistory {
   }this.db.exec('COMMIT')}catch(e){this.db.exec('ROLLBACK');throw e}
  }
  prune(now=Date.now()){const cutoff=new Date(now-72*3600000).toISOString();this.db.prepare('DELETE FROM points WHERE at < ?').run(cutoff);this.db.exec('DELETE FROM series WHERE id NOT IN (SELECT DISTINCT series_id FROM points)');}
+ deleteEvent(eventId){this.db.prepare('INSERT OR IGNORE INTO expired_events VALUES(?,?)').run(eventId,new Date().toISOString());const ids=this.db.prepare('SELECT id FROM series WHERE event_id=?').all(eventId);this.db.exec('BEGIN');try{for(const {id} of ids){this.db.prepare('DELETE FROM points WHERE series_id=?').run(id);this.db.prepare('DELETE FROM series WHERE id=?').run(id);this.current.delete(id)}this.db.exec('COMMIT')}catch(e){this.db.exec('ROLLBACK');throw e}}
  get(id,hours=72,limit=2000,now=Date.now()){
   const cutoff=new Date(now-Math.min(72,Math.max(1,hours))*3600000).toISOString(),end=new Date(now).toISOString();
   const metadata=this.db.prepare('SELECT metadata FROM series WHERE id=?').get(id);

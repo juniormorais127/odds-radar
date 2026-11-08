@@ -1,15 +1,20 @@
 import http from 'node:http';
+import {matching} from '../worker/backend.js';
+import {createLiveHouses} from './live-houses.mjs';
+import {purgeLiveJournals} from './purge-live-journals.mjs';
+import {LiveLifecycle} from './live-lifecycle.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {publicConfig,connectFeed,convertMarkets} from './tobetano-feed.mjs';
 import {eligibleLive,priceMovements} from './live-core.mjs';
-import {analyzeLive,analyzePrematch,favouriteSignal,LIMITS} from './opportunities.mjs';
+import {analyzeLive,analyzePrematch,favouriteSignal,LIMITS,analyzeLiveComparisons} from './opportunities.mjs';
 import {labelMarkets} from './market-labels.mjs';
 import {createHouseManager} from './house-manager.mjs';
 import {LiveHistory} from './live-history.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),dir=path.join(root,'data/live'),intervalMs=20000;
 await fs.mkdir(dir+'/history',{recursive:true});
+const lifecycle=new LiveLifecycle(dir+'/lifecycle.json');
 const liveHistory=new LiveHistory(dir+'/history.sqlite');
 let historyImporting=true,historyImportError=null;
 let feed=null,configAt=0,pending=false,cycle=0,nextAt=null,lastError=null,lastAttemptAt=null,lastSuccessfulAt=null;
@@ -17,11 +22,18 @@ let marketDictionary={};
 let snapshot={bookmakerId:'tobetano',mode:'live',observedAt:null,events:[],movements:[]};
 const clients=new Set();let liveSignals=[],preSignals=[],preFavourites=[],liveAnalysisMs=null,preAnalysisMs=null,preSourceAt=null,preError=null,preAnalyzedAt=null,preBusy=false,preGeneration=null;
 const broadcast=()=>{for(const client of clients)client.write('data: '+JSON.stringify({at:new Date().toISOString(),cycle})+'\n\n')};
+const combined=()=>{const events=[...snapshot.events,...liveHouses.events()].filter(g=>!lifecycle.rows.get(g.id)?.finishedAt);return {...snapshot,events:[...events,...lifecycle.missing(events)]}};
+const refreshExtra=()=>{const all=combined();for(const g of all.events)if(!g.lifecycle)lifecycle.observe(g);const changes=priceMovements(extraPrevious,all);extraPrevious=all;liveHistory.attach(all);liveHistory.append(changes);lifecycle.save();broadcast()};
+let extraPrevious={events:[]};
+const liveHouses=createLiveHouses(()=>{try{refreshExtra()}catch(e){console.error('Coletores ao vivo: '+e.message)}});
+let retentionBusy=false;
+async function expireFinished(){if(retentionBusy)return;retentionBusy=true;const expired=lifecycle.expire();try{for(const g of expired)liveHistory.deleteEvent(g.id);if(expired.length)await purgeLiveJournals(dir+'/history',new Set(expired.map(g=>g.id)));lifecycle.save()}catch(e){for(const g of expired)lifecycle.rows.set(g.id,g);lifecycle.save();console.error('Limpeza de jogos encerrados: '+e.message)}finally{retentionBusy=false}}
+setInterval(expireFinished,60000).unref();
 let preAnalysisTimer;
 const houseManager=createHouseManager(path.join(root,'data/robots'),()=>{clearTimeout(preAnalysisTimer);preAnalysisTimer=setTimeout(()=>{const start=performance.now();const api=houseManager.snapshot();preSignals=analyzePrematch(api);preFavourites=houseManager.documents().flatMap(d=>{const signal=favouriteSignal(d,'prematch');return signal?[signal]:[]});preSourceAt=api.quotes.filter(q=>q.method==='automatic'&&q.freshness==='current').map(q=>q.observedAt).sort().at(-1)||null;preAnalyzedAt=new Date().toISOString();preAnalysisMs=performance.now()-start;preError=null;broadcast()},200)});
-const opportunities=()=>({generatedAt:new Date().toISOString(),live:{sourceAt:snapshot.observedAt,analysisMs:liveAnalysisMs,stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000,bookmakers:['tobetano'],eventsAnalyzed:snapshot.events.length,limits:'Um feed ao vivo: identifica padrÃµes de preÃ§o, sem confirmar arbitragem entre casas.'},prematch:{sourceAt:preSourceAt,analyzedAt:preAnalyzedAt,analysisMs:preAnalysisMs,error:preError,refreshSeconds:30,limits:'RobÃ´s locais por casa, intervalo-alvo de 30 segundos, sem sobrepor coletas; duração e fila podem ampliar o intervalo. Cobertura parcial. Fontes bloqueadas ficam fora. Primeiro tempo: favoritos da Tobetano.'},signals:[...liveSignals,...preSignals,...preFavourites].filter(s=>{const age=Date.now()-Date.parse(s.observedAt);return age>=0&&age<=(s.mode==='live'?LIMITS.liveMaxAgeMs:LIMITS.prematchMaxAgeMs)})});
+const opportunities=()=>({generatedAt:new Date().toISOString(),live:{sourceAt:snapshot.observedAt,analysisMs:liveAnalysisMs,stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000,bookmakers:['tobetano',...liveHouses.status().filter(s=>s.status==='success').map(s=>s.id)],sources:liveHouses.status(),eventsAnalyzed:combined().events.filter(e=>!e.lifecycle).length,limits:'Um feed ao vivo: identifica padrÃµes de preÃ§o, sem confirmar arbitragem entre casas.'},prematch:{sourceAt:preSourceAt,analyzedAt:preAnalyzedAt,analysisMs:preAnalysisMs,error:preError,refreshSeconds:30,limits:'RobÃ´s locais por casa, intervalo-alvo de 30 segundos, sem sobrepor coletas; duração e fila podem ampliar o intervalo. Cobertura parcial. Fontes bloqueadas ficam fora. Primeiro tempo: favoritos da Tobetano.'},signals:[...liveSignals,...analyzeLiveComparisons(combined()),...preSignals,...preFavourites].filter(s=>{const age=Date.now()-Date.parse(s.observedAt);return age>=0&&age<=(s.mode==='live'?LIMITS.liveMaxAgeMs:LIMITS.prematchMaxAgeMs)})});
 try{snapshot=JSON.parse(await fs.readFile(dir+'/latest.json','utf8'))}catch(e){if(e.code!=='ENOENT')console.error('Snapshot local invÃ¡lido; aguardando coleta nova')}
-const status=()=>({service:'odds-radar-live',intervalSeconds:20,scope:'Tobetano Â· futebol ao vivo',running:true,pending,cycle,lastAttemptAt,lastSuccessfulAt,nextAt,lastError,observedAt:snapshot.observedAt,ageSeconds:snapshot.observedAt?(Date.now()-Date.parse(snapshot.observedAt))/1000:null,events:snapshot.events.length,quotes:snapshot.events.reduce((n,e)=>n+e.markets.reduce((total,m)=>total+m.marketItems.reduce((count,i)=>count+i.outcomes.length,0),0),0),stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000});
+const status=()=>({service:'odds-radar-live',intervalSeconds:20,scope:'Tobetano Â· futebol ao vivo',running:true,pending,cycle,lastAttemptAt,lastSuccessfulAt,nextAt,lastError,observedAt:snapshot.observedAt,ageSeconds:snapshot.observedAt?(Date.now()-Date.parse(snapshot.observedAt))/1000:null,events:combined().events.filter(e=>!e.lifecycle).length,quotes:combined().events.reduce((n,e)=>n+e.markets.reduce((total,m)=>total+m.marketItems.reduce((count,i)=>count+i.outcomes.length,0),0),0),stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000});
 async function collect(){
  if(pending)return;pending=true;const started=Date.now();lastAttemptAt=new Date().toISOString();cycle++;
  try{
@@ -30,8 +42,13 @@ async function collect(){
   for(let i=0;i<listed.length;i+=10)batches.push(listed.slice(i,i+10));
   let index=0;
   await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,bookmakerId:'tobetano',bookmakerName:'Tobetano',event:{...r.value,stageName:marketDictionary.stages?.F?.[r.value.scoreboard?.stage]},observedAt:at,markets:labelMarkets(convertMarkets(rows.filter(m=>m.key?.eventId===r.key)),r.value,marketDictionary)})}}));
+  const activeIds=new Set(events.map(e=>e.id)),missing=lifecycle.pending().filter(id=>!activeIds.has(id)).slice(0,100);
+  if(missing.length){try{const ended=await feed.query('GetRichEventsByIds',[missing]);for(const r of ended)if(r.value?.scoreboard?.stage===9){const previous=lifecycle.rows.get(r.key);if(previous){lifecycle.observe({...previous,event:{...r.value,stageName:'Encerrado'}});const key=e=>({home:e.competitors?.[0]?.name||'',away:e.competitors?.[1]?.name||'',time:new Date(e.startTime*1000).toISOString()});for(const tracked of lifecycle.rows.values())if(tracked.id!==r.key&&!tracked.finishedAt&&matching(key(tracked.event),key(r.value)))lifecycle.observe({...tracked,event:{...tracked.event,scoreboard:r.value.scoreboard,stageName:'Encerrado'},confirmedBy:'tobetano'})}}}catch(e){console.error('Confirmação do encerramento: '+e.message)}}
+  for(const g of events)lifecycle.observe(g);
+  await expireFinished();
+  lifecycle.save();
   const fresh={bookmakerId:'tobetano',mode:'live',observedAt:new Date().toISOString(),intervalSeconds:20,events};
-  liveHistory.attach(fresh);
+  liveHistory.attach({...fresh,events:[...fresh.events,...liveHouses.events()]});
   const analysisStart=performance.now();liveSignals=analyzeLive(fresh);liveAnalysisMs=performance.now()-analysisStart;
   fresh.movements=priceMovements(snapshot,fresh);snapshot=fresh;lastSuccessfulAt=fresh.observedAt;lastError=null;
   liveHistory.append(fresh.movements);
@@ -50,6 +67,7 @@ const server=http.createServer(async(req,res)=>{
   const origin=req.headers.origin;if(origin==='https://juniormorais127.github.io'||/^http:\/\/(127\.0\.0\.1|localhost):4180$/.test(origin||'')){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Private-Network','true')}
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Methods','GET, OPTIONS');res.writeHead(204);return res.end()}
   if(req.method!=='GET'){res.writeHead(405);return res.end('Somente leitura')}
+  if(url.pathname==='/api/live/collectors'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({sources:liveHouses.status()}))}
   if(url.pathname==='/api/collectors'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({at:new Date().toISOString(),houses:houseManager.status()}))}
   if(url.pathname==='/api/prematch'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(houseManager.snapshot()))}
   if(url.pathname.startsWith('/api/houses/')){const id=url.pathname.split('/').at(-1),house=houseManager.house(id);res.setHeader('Content-Type','application/json');if(!house){res.writeHead(404);return res.end(JSON.stringify({error:'Casa nÃ£o encontrada'}))}return res.end(JSON.stringify(house))}
@@ -58,7 +76,7 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/api/opportunities'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(opportunities()))}
   if(url.pathname==='/opportunities.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/opportunities-ui.js'))}
   if(url.pathname==='/health'||url.pathname==='/api/live/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(status()))}
-  if(url.pathname==='/api/live'){res.setHeader('Content-Type','application/json');const eventId=url.searchParams.get('eventId');return res.end(JSON.stringify({...snapshot,status:status(),events:eventId?snapshot.events.filter(e=>e.id===eventId):snapshot.events}))}
+  if(url.pathname==='/api/live'){res.setHeader('Content-Type','application/json');const eventId=url.searchParams.get('eventId');return res.end(JSON.stringify({...combined(),status:status(),sources:liveHouses.status(),events:eventId?combined().events.filter(e=>e.id===eventId):combined().events}))}
   if(url.pathname==='/api/live/history'){res.setHeader('Content-Type','application/json');const id=url.searchParams.get('seriesId');if(!/^[a-f0-9]{64}$/.test(id||'')){res.writeHead(400);return res.end(JSON.stringify({error:'Selecione uma odd para acompanhar'}))}return res.end(JSON.stringify({...liveHistory.get(id,Number(url.searchParams.get('hours'))||72,Number(url.searchParams.get('limit'))||2000),importing:historyImporting,importError:historyImportError}))}
   if(url.pathname==='/live-history.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/live-history-ui.js'))}
   if(url.pathname==='/opportunities.html'){res.setHeader('Content-Type','text/html;charset=utf-8');return res.end(await fs.readFile(root+'/worker/opportunities.html'))}
@@ -66,5 +84,5 @@ const server=http.createServer(async(req,res)=>{
   res.writeHead(404);res.end('NÃ£o encontrado');
  }catch(e){res.writeHead(500);res.end('Erro no servidor local')}
 });
-server.listen(4180,'127.0.0.1',()=>{console.log('RobÃ´ local em http://127.0.0.1:4180');collect();houseManager.start();liveHistory.importJournal(dir+'/history').then(()=>{historyImporting=false;broadcast()}).catch(e=>{historyImporting=false;historyImportError=e.message;console.error('ImportaÃ§Ã£o de histÃ³rico: '+e.message)})});
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{houseManager.stop();feed?.close();liveHistory.close();server.close();process.exit(0)});
+server.listen(4180,'127.0.0.1',()=>{console.log('RobÃ´ local em http://127.0.0.1:4180');collect();houseManager.start();liveHouses.start();liveHistory.importJournal(dir+'/history').then(()=>{historyImporting=false;broadcast()}).catch(e=>{historyImporting=false;historyImportError=e.message;console.error('ImportaÃ§Ã£o de histÃ³rico: '+e.message)})});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{houseManager.stop();liveHouses.stop();feed?.close();liveHistory.close();server.close();process.exit(0)});

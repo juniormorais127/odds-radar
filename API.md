@@ -101,3 +101,12 @@ No painel local, escolha a partida, o período e uma opção no filtro Seleção
 `http://127.0.0.1:4180/api/live/history?seriesId=ID&hours=72&limit=15000` consulta uma série identificada em cada outcome de `/api/live`. A janela aceita até 72 horas. Coletas não observadas não são reconstruídas. O painel público também permite filtrar Casa, Empate ou Fora no histórico pré-jogo.
 
 Os sinais pré-jogo incluem Abrir jogo quando existe sourceUrl da cotação. O link abre o evento fornecido pela fonte; não promete inclusão automática no bilhete. Mercado, seleção e odd precisam ser conferidos na casa.
+
+
+## Ao vivo em várias casas
+
+`/api/live` unifica Tobetano (mercados disponíveis), Giro Certo, Futamina e Melbet (resultado final 1X2). `/api/live/collectors` informa a situação independente das três novas fontes. Intervalo-alvo de 20 segundos, sem sobrepor consultas. Falha não renova horários de odds antigas. Cobertura parcial.
+
+Possíveis surebets ao vivo exigem nomes/horário compatíveis, mesmo placar conhecido, mercado final de 90 minutos, odds não suspensas, menos de 40 segundos de idade e até 10 segundos entre consultas. Giro/Futamina são tratados como uma referência compartilhada. Não confirma aceitação nem liquidação.
+
+Jogos vistos como encerrados pelo estágio 9 (traduzido pelo fornecedor como Encerrado) permanecem na tela local sem odds disponíveis. O histórico ao vivo local e registros por hora do jogo são removidos 24 horas após a confirmação, com verificação a cada minuto. Confirmações podem ser propagadas entre fontes apenas com identidade/horário compatíveis. Ausência da lista significa Sem atualização, sem presumir fim. Histórico pré-jogo e snapshots públicos do GitHub mantêm sua política separada de 72 horas.
