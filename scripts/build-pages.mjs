@@ -6,8 +6,10 @@ import {mergeBrowserQuotes,mergeAutomaticQuotes} from './browser-quotes.mjs';
 import {writeFootballApi} from './football-api.mjs';
 import {updateHistory} from './odds-history.mjs';
 import {publishTobetano,mergeTobetano} from './tobetano-integration.mjs';
+import {loadExtraHouses,mergeExtraHouses} from './extra-houses.mjs';
 const output='pages-dist';
 const tobetano=await publishTobetano(output);
+const extraHouses=await loadExtraHouses();
 await fs.mkdir(output+'/data/catalog',{recursive:true});
 try{await fs.copyFile('collector-output/new-houses.json',output+'/data/new-houses.json')}catch(e){if(e.code!=='ENOENT')throw e}
 const saved=new Map();
@@ -22,6 +24,7 @@ for(const [route,file] of [['odds','odds.json'],['monitor','monitor.json']]){
  if(route==='odds'){
   mergeBrowserQuotes(data);mergeAutomaticQuotes(data,newHouses);
   mergeTobetano(data,tobetano);
+  mergeExtraHouses(data,extraHouses);
   const api=await writeFootballApi(fs,output,data,newHouses);
   const history=updateHistory(previousHistory,api);
   await fs.mkdir('history-state',{recursive:true});

@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {labelMarkets} from './market-labels.mjs';
+const event={competitors:[{name:'Adelaide United'},{name:'Melbourne Victory'}]};
+const create=(type,period,params,outcomes)=>({key:{marketType:type,resultKind:1,period},marketItems:[{key:{marketParameters:params},outcomes:outcomes.map(([type,decimalOdds])=>({key:{type,values:[]},decimalOdds}))}]});
+const markets=[create(2,0,[],[[0,1.55],[1,3.36],[3,6.25]]),create(5,1,['2.5'],[[4,1.8],[5,2.1]]),create(4,0,['-1'],[[86,1.9],[87,1.9]])];
+const labels=labelMarkets(markets,event,{tradingTypes:{1:{translation:'Gols'}}});
+assert.deepEqual(labels[0].marketItems[0].outcomes.map(o=>o.name),['Casa (Adelaide United)','Empate','Fora (Melbourne Victory)']);
+assert.deepEqual(labels[0].marketItems[0].outcomes.map(o=>o.decimalOdds),[1.55,3.36,6.25]);
+assert.equal(labels[1].marketItems[0].outcomes[0].name,'Mais de 2,5 gols');assert.equal(labels[1].periodName,'1º tempo');
+assert.match(labels[2].marketItems[0].outcomes[0].name,/handicap -1$/);assert.match(labels[2].marketItems[0].outcomes[1].name,/handicap \+1$/);
+assert(labels.every(m=>m.marketItems.every(i=>i.outcomes.every(o=>o.bookmakerName==='Tobetano'))));
+console.log('Labels: home/draw/away, team names, totals, handicap inversion, bookmaker and unchanged prices OK');

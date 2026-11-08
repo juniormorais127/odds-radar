@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {parseGrana,exclusiveDate} from './house-adapters.mjs';
+import {createHouseManager} from './house-manager.mjs';
+const now=Date.parse('2026-11-08T07:00:00Z');
+const fixture={items:[{id:10,sportId:1,status:0,time:'2026-11-08 14:00:00',competitor1Id:1,competitor2Id:2,leagueId:3,translationSlug:'a-b'}],relations:{competitors:[{id:1,name:'A'},{id:2,name:'B'}],league:[{id:3,name:'Liga',translationSlug:'liga'}],odds:{10:[{id:621,status:1,specifiers:null,outcomes:[{id:3,odds:4,active:1},{id:1,odds:1.5,active:1},{id:2,odds:3,active:1}]}]}}};
+assert.deepEqual(parseGrana(fixture,now)[0].odds,[1.5,3,4]);assert.equal(Date.parse(parseGrana(fixture,now)[0].time),Date.parse('2026-11-08T14:00:00Z'));
+const inactive=structuredClone(fixture);inactive.relations.odds[10][0].outcomes[0].active=0;assert.equal(parseGrana(inactive,now).length,0);
+const live=structuredClone(fixture);live.items[0].status=1;assert.equal(parseGrana(live,now).length,0);
+assert.equal(exclusiveDate('Hoje','11:00',now),'2026-11-08T11:00:00-03:00');assert.equal(exclusiveDate('Amanhã','11:00',now),'2026-11-09T11:00:00-03:00');assert.equal(exclusiveDate('21/11','11:00',now),'2026-11-21T11:00:00-03:00');
+const manager=createHouseManager('unused');const time=new Date(Date.now()+86400000).toISOString(),at=new Date().toISOString();
+for(const id of ['giro','grana'])Object.assign(manager.house(id),{status:'success',lastSuccessAt:at,games:[{home:'A',away:'B',time,odds:[1.5,3,4],url:'https://example.com'}]});
+let api=manager.snapshot();assert.equal(api.events.length,1);assert.equal(api.quotes.length,6);
+manager.house('grana').status='blocked';manager.house('grana').error='HTTP 403';api=manager.snapshot();assert.equal(api.quotes.filter(q=>q.bookmakerId==='giro'&&q.freshness==='current').length,3);assert(api.quotes.filter(q=>q.bookmakerId==='grana').every(q=>q.freshness==='historical'));
+assert(manager.status().every(s=>!('games'in s)&&!('documents'in s)));assert.equal(manager.status().length,12);
+console.log('House robots: Granawin selection mapping, live/suspension exclusion, timezone, source isolation and truthful status OK');

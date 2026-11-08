@@ -1,5 +1,21 @@
 # API de futebol v1
 
+## Robôs locais por casa
+
+O serviço local inicia um coletor independente para cada uma das 12 casas cadastradas. `GET /api/collectors` mostra situação, próxima tentativa, última coleta válida, contagens e cobertura. `GET /api/houses/{id}` devolve os dados daquele coletor. `GET /api/prematch` reúne os preços de resultado final de pré-jogo no mesmo contrato da API pública, incluindo `bookmakerName` e `selectionLabel` (Casa, Empate, Fora e nomes dos times).
+
+Giro Certo, Esportenet SP, Melbet, Esportenet Jogos, Futamina, Tobetano e Granawin são consultadas normalmente a cada 3 minutos neste PC; ExclusiveBet a cada 5 minutos. O serviço limita a três coletores simultâneos; consultas lentas podem atrasar a próxima execução. Granawin usa paginação da API pública e ExclusiveBet consulta ligas atuais com navegador padrão, sem login. A Tobetano local usa resultado final das próximas 24h e confere primeiro tempo dos favoritos até 1,60; o catálogo completo publicado segue seu processo próprio. As fontes mantêm seus limites de cobertura.
+
+2UP, Sportsbet.io, Stake e FortuneJack recebem tentativas independentes com intervalo de 30 minutos, mas continuam marcadas como bloqueadas quando respondem HTTP 403. Não há solução de CAPTCHA, login automatizado, proxy ou contorno de bloqueios. Uma fonte falhar não interrompe as outras; cotações antigas não são reclassificadas como atuais. As alterações de resultado final por casa são guardadas em `data/robots/history/{casa}/` por hora por aproximadamente 72h, com o mesmo limite técnico de uma hora do particionamento. Os dados desta pasta não são publicados no Git.
+
+## Análise automática local
+
+`GET /api/opportunities` entrega os sinais com modo, casa, preços, regra, horário e tempo gasto na análise. Ao vivo, a análise ocorre imediatamente após cada coleta de 20s. `GET /api/events` transmite avisos SSE para a tela carregar o resultado sem aguardar outro intervalo. O padrão favorito/primeiro tempo exige resultado final até 1,60 e vitória do mesmo time no primeiro tempo acima de 3,00; ao vivo, a verificação é conservadoramente suspensa a partir de 45 minutos no relógio do provedor. Não é um modelo de probabilidade ou prova de erro.
+
+No pré-jogo, cada resultado novo de um robô local dispara nova análise de possíveis surebets, diferenças entre casas de pelo menos 20% e o padrão favorito/primeiro tempo na Tobetano. Sinais ao vivo expiram após 40 segundos sem coleta válida; pré-jogo após 5 minutos. Suspensas, leituras manuais, jogos iniciados no pré-jogo e períodos/linhas incompatíveis ficam fora. A identificação de surebet é matemática e depende de confirmar simultaneamente preços, aceitação e regras nas casas. O ao vivo atualmente recebe somente Tobetano e não afirma arbitragem ao vivo entre várias casas.
+
+Nomes de mercados e seleções acompanham as odds: Casa (time), Empate, Fora (time), totais e handicap, com linha e período separados. Os nomes usam traduções públicas do provedor e preservam o preço original. Seleções especiais sem tradução confirmada são identificadas como não traduzidas; códigos técnicos permanecem na API para rastreabilidade.
+
 ## Coletor local ao vivo · 20 segundos
 
 Execute `Iniciar-Ao-Vivo.ps1` neste PC. Ele inicia Node em segundo plano na porta de loopback 4180; o painel local fica em http://127.0.0.1:4180/ e a API em http://127.0.0.1:4180/api/live. `GET /api/live?eventId=ID` filtra um jogo; `GET /api/live/status` informa ciclo, última coleta, próxima tentativa, erros, contagens e `stale`. Os dados incluem evento, placar, período, horário de observação e todos os mercados ao vivo retornados pela Tobetano. São separados do catálogo pré-jogo.

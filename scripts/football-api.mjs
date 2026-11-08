@@ -14,7 +14,7 @@ export function footballApi(data,collection,now=Date.now()){
   for(const [house,book] of Object.entries(game.books||{})){
    if(!houses[house]||!Array.isArray(book.odds)||book.odds.length!==3||!book.odds.every(n=>Number.isFinite(n)&&n>1))continue;
    const time=Date.parse(book.at),age=now-time,current=Number.isFinite(time)&&age>=0&&age<=300000&&!book.offline&&!book.manualSnapshot;
-   for(const [i,selection] of ['home','draw','away'].entries())rows.push({id:id(eventId+'|'+house+'|ft_1x2|'+selection),eventId,bookmakerId:house,marketId:'ft_1x2',period:'full_time',selection,selectionName:i===0?game.home:i===1?'Empate':game.away,decimalOdds:book.odds[i],observedAt:Number.isFinite(time)?new Date(time).toISOString():null,freshness:current?'current':'historical',method:book.manualSnapshot?'browser_manual':book.offline?'fallback':'automatic',sourceUrl:book.url||null});
+   for(const [i,selection] of ['home','draw','away'].entries())rows.push({id:id(eventId+'|'+house+'|ft_1x2|'+selection),eventId,bookmakerId:house,bookmakerName:houses[house],marketId:'ft_1x2',period:'full_time',selection,selectionLabel:i===0?'Casa ('+game.home+')':i===1?'Empate':'Fora ('+game.away+')',selectionName:i===0?game.home:i===1?'Empate':game.away,decimalOdds:book.odds[i],observedAt:Number.isFinite(time)?new Date(time).toISOString():null,freshness:current?'current':'historical',method:book.manualSnapshot?'browser_manual':book.offline?'fallback':'automatic',sourceUrl:book.url||null});
   }
   if(!rows.length)continue;
   if(!events.some(e=>e.id===eventId))events.push({id:eventId,sport:'football',home:game.home,away:game.away,startsAt,league:game.league||null});

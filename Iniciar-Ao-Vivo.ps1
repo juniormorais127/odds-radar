@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 try {
     $existing = Invoke-RestMethod -Uri 'http://127.0.0.1:4180/health' -TimeoutSec 2

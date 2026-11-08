@@ -4,22 +4,33 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {publicConfig,connectFeed,convertMarkets} from './tobetano-feed.mjs';
 import {eligibleLive,priceMovements} from './live-core.mjs';
+import {analyzeLive,analyzePrematch,favouriteSignal,LIMITS} from './opportunities.mjs';
+import {labelMarkets} from './market-labels.mjs';
+import {createHouseManager} from './house-manager.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),dir=path.join(root,'data/live'),intervalMs=20000;
 await fs.mkdir(dir+'/history',{recursive:true});
 let feed=null,configAt=0,pending=false,cycle=0,nextAt=null,lastError=null,lastAttemptAt=null,lastSuccessfulAt=null;
+let marketDictionary={};
 let snapshot={bookmakerId:'tobetano',mode:'live',observedAt:null,events:[],movements:[]};
+const clients=new Set();let liveSignals=[],preSignals=[],preFavourites=[],liveAnalysisMs=null,preAnalysisMs=null,preSourceAt=null,preError=null,preAnalyzedAt=null,preBusy=false,preGeneration=null;
+const broadcast=()=>{for(const client of clients)client.write('data: '+JSON.stringify({at:new Date().toISOString(),cycle})+'\n\n')};
+let preAnalysisTimer;
+const houseManager=createHouseManager(path.join(root,'data/robots'),()=>{clearTimeout(preAnalysisTimer);preAnalysisTimer=setTimeout(()=>{const start=performance.now();const api=houseManager.snapshot();preSignals=analyzePrematch(api);preFavourites=houseManager.documents().flatMap(d=>{const signal=favouriteSignal(d,'prematch');return signal?[signal]:[]});preSourceAt=api.quotes.filter(q=>q.method==='automatic'&&q.freshness==='current').map(q=>q.observedAt).sort().at(-1)||null;preAnalyzedAt=new Date().toISOString();preAnalysisMs=performance.now()-start;preError=null;broadcast()},200)});
+const opportunities=()=>({generatedAt:new Date().toISOString(),live:{sourceAt:snapshot.observedAt,analysisMs:liveAnalysisMs,stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000,bookmakers:['tobetano'],eventsAnalyzed:snapshot.events.length,limits:'Um feed ao vivo: identifica padrões de preço, sem confirmar arbitragem entre casas.'},prematch:{sourceAt:preSourceAt,analyzedAt:preAnalyzedAt,analysisMs:preAnalysisMs,error:preError,refreshSeconds:180,limits:'Robôs locais por casa, normalmente a cada 3 minutos; ExclusiveBet a cada 5. Cobertura parcial. Fontes bloqueadas ficam fora. Primeiro tempo: favoritos da Tobetano.'},signals:[...liveSignals,...preSignals,...preFavourites].filter(s=>{const age=Date.now()-Date.parse(s.observedAt);return age>=0&&age<=(s.mode==='live'?LIMITS.liveMaxAgeMs:LIMITS.prematchMaxAgeMs)})});
 try{snapshot=JSON.parse(await fs.readFile(dir+'/latest.json','utf8'))}catch(e){if(e.code!=='ENOENT')console.error('Snapshot local inválido; aguardando coleta nova')}
 const status=()=>({service:'odds-radar-live',intervalSeconds:20,scope:'Tobetano · futebol ao vivo',running:true,pending,cycle,lastAttemptAt,lastSuccessfulAt,nextAt,lastError,observedAt:snapshot.observedAt,ageSeconds:snapshot.observedAt?(Date.now()-Date.parse(snapshot.observedAt))/1000:null,events:snapshot.events.length,quotes:snapshot.events.reduce((n,e)=>n+e.markets.reduce((total,m)=>total+m.marketItems.reduce((count,i)=>count+i.outcomes.length,0),0),0),stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000});
 async function collect(){
  if(pending)return;pending=true;const started=Date.now();lastAttemptAt=new Date().toISOString();cycle++;
  try{
-  if(!feed||Date.now()-configAt>3600000){feed?.close();feed=await connectFeed(await publicConfig());configAt=Date.now()}
+  if(!feed||Date.now()-configAt>3600000){feed?.close();const config=await publicConfig();feed=await connectFeed(config);configAt=Date.now();try{const r=await fetch('https://sport-iframe.aakvjlhif.com/apg/v0/sport/feed/localization/markets?lang=pt&prompt=true',{headers:{'X-Api-Key':config.widgets.defaultVariation.apiKeySdk},signal:AbortSignal.timeout(10000)});if(r.ok)marketDictionary=await r.json()}catch{}}
   const listed=(await feed.query('GetLiveRichEventsBySport',['F'])).filter(r=>!r.isRemoved&&eligibleLive(r.value)),events=[],batches=[];
   for(let i=0;i<listed.length;i+=10)batches.push(listed.slice(i,i+10));
   let index=0;
-  await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,event:r.value,observedAt:at,markets:convertMarkets(rows.filter(m=>m.key?.eventId===r.key))})}}));
+  await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,bookmakerId:'tobetano',bookmakerName:'Tobetano',event:{...r.value,stageName:marketDictionary.stages?.F?.[r.value.scoreboard?.stage]},observedAt:at,markets:labelMarkets(convertMarkets(rows.filter(m=>m.key?.eventId===r.key)),r.value,marketDictionary)})}}));
   const fresh={bookmakerId:'tobetano',mode:'live',observedAt:new Date().toISOString(),intervalSeconds:20,events};
+  const analysisStart=performance.now();liveSignals=analyzeLive(fresh);liveAnalysisMs=performance.now()-analysisStart;
   fresh.movements=priceMovements(snapshot,fresh);snapshot=fresh;lastSuccessfulAt=fresh.observedAt;lastError=null;
+  broadcast();
   await fs.writeFile(dir+'/latest.tmp',JSON.stringify(snapshot));await fs.rename(dir+'/latest.tmp',dir+'/latest.json');
   if(fresh.movements.length){const hour=fresh.observedAt.slice(0,13).replaceAll(':','-');await fs.appendFile(dir+'/history/'+hour+'.jsonl',fresh.movements.map(r=>JSON.stringify(r)).join('\n')+'\n')}
   const cutoff=Date.now()-72*3600000;for(const name of await fs.readdir(dir+'/history')){if(!/^\d{4}-\d{2}-\d{2}T\d{2}\.jsonl$/.test(name))continue;const hour=Date.parse(name.slice(0,13)+':00:00Z');if(hour+3600000<cutoff)await fs.unlink(path.join(dir,'history',name))}
@@ -33,11 +44,18 @@ const server=http.createServer(async(req,res)=>{
   const origin=req.headers.origin;if(origin==='https://juniormorais127.github.io'||/^http:\/\/(127\.0\.0\.1|localhost):4180$/.test(origin||'')){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Private-Network','true')}
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Methods','GET, OPTIONS');res.writeHead(204);return res.end()}
   if(req.method!=='GET'){res.writeHead(405);return res.end('Somente leitura')}
+  if(url.pathname==='/api/collectors'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify({at:new Date().toISOString(),houses:houseManager.status()}))}
+  if(url.pathname==='/api/prematch'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(houseManager.snapshot()))}
+  if(url.pathname.startsWith('/api/houses/')){const id=url.pathname.split('/').at(-1),house=houseManager.house(id);res.setHeader('Content-Type','application/json');if(!house){res.writeHead(404);return res.end(JSON.stringify({error:'Casa não encontrada'}))}return res.end(JSON.stringify(house))}
+  if(url.pathname==='/collectors.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/collectors-ui.js'))}
+  if(url.pathname==='/api/events'){res.setHeader('Content-Type','text/event-stream');res.setHeader('Connection','keep-alive');res.write('data: '+JSON.stringify({cycle})+'\n\n');clients.add(res);const heartbeat=setInterval(()=>res.write(': heartbeat\n\n'),15000);req.on('close',()=>{clients.delete(res);clearInterval(heartbeat)});return}
+  if(url.pathname==='/api/opportunities'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(opportunities()))}
+  if(url.pathname==='/opportunities.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/opportunities-ui.js'))}
   if(url.pathname==='/health'||url.pathname==='/api/live/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(status()))}
   if(url.pathname==='/api/live'){res.setHeader('Content-Type','application/json');const eventId=url.searchParams.get('eventId');return res.end(JSON.stringify({...snapshot,status:status(),events:eventId?snapshot.events.filter(e=>e.id===eventId):snapshot.events}))}
   if(url.pathname==='/'){res.setHeader('Content-Type','text/html;charset=utf-8');return res.end(await fs.readFile(root+'/worker/live.html'))}
   res.writeHead(404);res.end('Não encontrado');
  }catch(e){res.writeHead(500);res.end('Erro no servidor local')}
 });
-server.listen(4180,'127.0.0.1',()=>{console.log('Robô local em http://127.0.0.1:4180');collect()});
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{feed?.close();server.close();process.exit(0)});
+server.listen(4180,'127.0.0.1',()=>{console.log('Robô local em http://127.0.0.1:4180');collect();houseManager.start()});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{houseManager.stop();feed?.close();server.close();process.exit(0)});

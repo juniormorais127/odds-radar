@@ -1,12 +1,14 @@
 import fs from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {publicConfig,connectFeed,convertMarkets,finalOdds,eligiblePrematch,TOBETANO_ORIGIN} from './tobetano-feed.mjs';
+import {labelMarkets} from './market-labels.mjs';
 const root='collector-output/tobetano';await fs.mkdir(root+'/events',{recursive:true});
 const startedAt=new Date().toISOString(),failures=[],events=new Map(),records=[];let feed;
 const report={bookmakerId:'tobetano',name:'Tobetano',sport:'football',startedAt,ok:false,partial:true,events:[],failures};
 async function pool(items,fn){let index=0;await Promise.all(Array.from({length:4},async()=>{while(index<items.length){const item=items[index++];try{await fn(item)}catch(e){failures.push({item:Array.isArray(item)?item.map(r=>r.id):item.key,error:e.message})}}}))}
 try{
- const config=await publicConfig();feed=await connectFeed(config);
+ const config=await publicConfig();feed=await connectFeed(config);let dictionary={};
+ try{const r=await fetch(TOBETANO_ORIGIN+'/apg/v0/sport/feed/localization/markets?lang=pt&prompt=true',{headers:{'X-Api-Key':config.widgets.defaultVariation.apiKeySdk},signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('HTTP '+r.status);dictionary=await r.json();await fs.writeFile(root+'/translations.json',JSON.stringify(dictionary))}catch(e){report.translationError=e.message}
  const sports=await feed.query('GetSports');report.advertisedFootball=sports.find(s=>s.key==='F')?.value||null;
  const tournaments=await feed.query('GetTournamentsBySport',['F',1]);report.tournamentsRequested=tournaments.length;
  await pool(tournaments,async t=>{const rows=await feed.query('GetRichEventsByTournamentIdAndStage',[t.key,1]);for(const r of rows)if(!r.isRemoved&&r.value?.sport==='F'&&r.value.stage===1&&r.value.status===0&&r.value.startTime*1000>Date.now()&&!r.value.isCybersport)events.set(r.key,{id:r.key,...r.value})});
@@ -21,7 +23,7 @@ try{
   const observedAt=new Date().toISOString();
   for(const event of batch){
    if(!eligiblePrematch(event))continue;
-   const markets=convertMarkets(grouped.get(event.id)),outcomes=markets.flatMap(m=>m.marketItems.flatMap(i=>i.outcomes));
+   const markets=labelMarkets(convertMarkets(grouped.get(event.id)),event,dictionary),outcomes=markets.flatMap(m=>m.marketItems.flatMap(i=>i.outcomes));
    const sourceUrl=TOBETANO_ORIGIN+'/pt/events/'+event.slug+'-'+event.id;
    const document={bookmakerId:'tobetano',sport:'football',observedAt,event,sourceUrl,markets};
    await fs.writeFile(root+'/events/'+event.id+'.json',JSON.stringify(document));

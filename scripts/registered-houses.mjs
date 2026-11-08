@@ -12,7 +12,7 @@ export function withRegisteredHouses(html){
    if(!source.ok)continue;
    const good=(source.records||[]).filter(r=>r.house===source.key&&Array.isArray(r.odds)&&r.odds.length===3&&r.odds.every(o=>Number.isFinite(o)&&o>1));
    if(!good.length)continue;
-   registry.records=registry.records.filter(r=>r.house!==source.key).concat(good.map(r=>({...r,url:source.url,at:source.at,automatic:true,league:'Amostra de evento cadastrado'})));
+   registry.records=registry.records.filter(r=>r.house!==source.key).concat(good.map(r=>({...r,url:r.url||source.url,at:source.at,automatic:true,league:'Amostra de evento cadastrado'})));
   }
  }
  const code=fs.readFileSync(new URL('../worker/registered-houses.js',import.meta.url),'utf8');

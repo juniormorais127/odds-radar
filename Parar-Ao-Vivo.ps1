@@ -1,4 +1,4 @@
-$taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$taskRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $pidFile = Join-Path $taskRoot 'data/live/process.pid'
 if (-not (Test-Path -LiteralPath $pidFile)) { Write-Output 'Nenhum PID do robô salvo.'; exit }
 $liveProcessId = [int](Get-Content -LiteralPath $pidFile)

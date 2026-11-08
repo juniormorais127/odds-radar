@@ -30,6 +30,7 @@ jobs:
       - run: npm test
       - run: node scripts/check-public-parser.mjs
       - run: node scripts/collect-public-houses.mjs
+      - run: node scripts/collect-extra-houses.mjs
       - run: node scripts/collect-tobetano.mjs
       - name: Restaurar histórico persistido
         uses: actions/github-script@v7
