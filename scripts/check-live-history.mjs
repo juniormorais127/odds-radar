@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {LiveHistory,liveSeriesId} from './live-history.mjs';
+const now=Date.now(),row={eventId:'match',market:{resultKind:1,marketType:2,period:0},line:{marketParameters:[]},selection:{type:0,values:[]}};
+const id=liveSeriesId(row);assert.notEqual(id,liveSeriesId({...row,selection:{type:3,values:[]}}));assert.notEqual(id,liveSeriesId({...row,market:{...row.market,period:1}}));assert.notEqual(id,liveSeriesId({...row,line:{marketParameters:['-1']}}));assert.notEqual(id,liveSeriesId({...row,bookmakerId:'giro'}));
+assert.equal(id,liveSeriesId({...row,market:{period:0,marketType:2,resultKind:1,subPeriod:null}}));
+const history=new LiveHistory(':memory:');history.append([{...row,at:new Date(now-20000).toISOString(),after:2},{...row,at:new Date(now).toISOString(),after:2.5}],now);
+let data=history.get(id,72,2000,now);assert.equal(data.stats.count,2);assert.equal(data.stats.changePercent,25);assert.equal(data.stats.minimum,2);assert.equal(data.stats.maximum,2.5);
+history.append([{...row,at:new Date(now).toISOString(),after:2.5}],now);assert.equal(history.get(id,72,2000,now).stats.count,2);
+assert.equal(history.get(liveSeriesId({...row,selection:{type:3,values:[]}}),72,2000,now).stats.count,0);
+history.prune(now+72*3600000+1);assert.equal(history.get(id,72,2000,now+72*3600000+1).stats.count,0);history.close();
+console.log('Live history: exact selection identity, period/line/bookmaker isolation, deduplication, change metrics and 72h expiry OK');

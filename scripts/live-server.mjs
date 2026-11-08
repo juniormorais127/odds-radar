@@ -7,8 +7,11 @@ import {eligibleLive,priceMovements} from './live-core.mjs';
 import {analyzeLive,analyzePrematch,favouriteSignal,LIMITS} from './opportunities.mjs';
 import {labelMarkets} from './market-labels.mjs';
 import {createHouseManager} from './house-manager.mjs';
+import {LiveHistory} from './live-history.mjs';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),dir=path.join(root,'data/live'),intervalMs=20000;
 await fs.mkdir(dir+'/history',{recursive:true});
+const liveHistory=new LiveHistory(dir+'/history.sqlite');
+let historyImporting=true,historyImportError=null;
 let feed=null,configAt=0,pending=false,cycle=0,nextAt=null,lastError=null,lastAttemptAt=null,lastSuccessfulAt=null;
 let marketDictionary={};
 let snapshot={bookmakerId:'tobetano',mode:'live',observedAt:null,events:[],movements:[]};
@@ -28,8 +31,11 @@ async function collect(){
   let index=0;
   await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,bookmakerId:'tobetano',bookmakerName:'Tobetano',event:{...r.value,stageName:marketDictionary.stages?.F?.[r.value.scoreboard?.stage]},observedAt:at,markets:labelMarkets(convertMarkets(rows.filter(m=>m.key?.eventId===r.key)),r.value,marketDictionary)})}}));
   const fresh={bookmakerId:'tobetano',mode:'live',observedAt:new Date().toISOString(),intervalSeconds:20,events};
+  liveHistory.attach(fresh);
   const analysisStart=performance.now();liveSignals=analyzeLive(fresh);liveAnalysisMs=performance.now()-analysisStart;
   fresh.movements=priceMovements(snapshot,fresh);snapshot=fresh;lastSuccessfulAt=fresh.observedAt;lastError=null;
+  liveHistory.append(fresh.movements);
+  liveHistory.prune();
   broadcast();
   await fs.writeFile(dir+'/latest.tmp',JSON.stringify(snapshot));await fs.rename(dir+'/latest.tmp',dir+'/latest.json');
   if(fresh.movements.length){const hour=fresh.observedAt.slice(0,13).replaceAll(':','-');await fs.appendFile(dir+'/history/'+hour+'.jsonl',fresh.movements.map(r=>JSON.stringify(r)).join('\n')+'\n')}
@@ -53,9 +59,11 @@ const server=http.createServer(async(req,res)=>{
   if(url.pathname==='/opportunities.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/opportunities-ui.js'))}
   if(url.pathname==='/health'||url.pathname==='/api/live/status'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(status()))}
   if(url.pathname==='/api/live'){res.setHeader('Content-Type','application/json');const eventId=url.searchParams.get('eventId');return res.end(JSON.stringify({...snapshot,status:status(),events:eventId?snapshot.events.filter(e=>e.id===eventId):snapshot.events}))}
+  if(url.pathname==='/api/live/history'){res.setHeader('Content-Type','application/json');const id=url.searchParams.get('seriesId');if(!/^[a-f0-9]{64}$/.test(id||'')){res.writeHead(400);return res.end(JSON.stringify({error:'Selecione uma odd para acompanhar'}))}return res.end(JSON.stringify({...liveHistory.get(id,Number(url.searchParams.get('hours'))||72,Number(url.searchParams.get('limit'))||2000),importing:historyImporting,importError:historyImportError}))}
+  if(url.pathname==='/live-history.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/live-history-ui.js'))}
   if(url.pathname==='/'){res.setHeader('Content-Type','text/html;charset=utf-8');return res.end(await fs.readFile(root+'/worker/live.html'))}
   res.writeHead(404);res.end('Não encontrado');
  }catch(e){res.writeHead(500);res.end('Erro no servidor local')}
 });
-server.listen(4180,'127.0.0.1',()=>{console.log('Robô local em http://127.0.0.1:4180');collect();houseManager.start()});
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{houseManager.stop();feed?.close();server.close();process.exit(0)});
+server.listen(4180,'127.0.0.1',()=>{console.log('Robô local em http://127.0.0.1:4180');collect();houseManager.start();liveHistory.importJournal(dir+'/history').then(()=>{historyImporting=false;broadcast()}).catch(e=>{historyImporting=false;historyImportError=e.message;console.error('Importação de histórico: '+e.message)})});
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{houseManager.stop();feed?.close();liveHistory.close();server.close();process.exit(0)});

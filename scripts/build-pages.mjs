@@ -69,6 +69,6 @@ let apiPage=await fs.readFile(output+'/api.html','utf8');
 apiPage=apiPage.replace('</ul>','<li><a style="color:#7dd3fc" href="api/v1/tobetano/index.json">Tobetano · todos os mercados de futebol pré-jogo</a></li></ul>');
 await fs.writeFile(output+'/api.html',apiPage);
 html=html.replace('</body>','<script src="tobetano.js?v=1"></script></body>');
-html=html.replace('</body>','<script src="history.js?v=2"></script></body>');
+html=html.replace('</body>','<script src="history.js?v=3"></script></body>');
 await fs.writeFile(output+'/index.html',html);
 await fs.writeFile(output+'/.nojekyll','');

@@ -90,3 +90,12 @@ Esta é a base para um futuro serviço com banco, filtros no servidor e autentic
 O estado é restaurado do artefato `odds-history-v1` do GitHub Actions e salvo novamente após cada coleta. Os artefatos de recuperação têm retenção técnica de 4 dias; os pontos expostos na API são limitados a 72 horas na geração. Se a coleta parar, o arquivo publicado não expira sozinho: consumidores também devem filtrar `samples.at` pela hora atual. Falhas ao restaurar estado interrompem a publicação em vez de apagar silenciosamente o histórico.
 
 `movement-alerts.json` contém altas e quedas absolutas de pelo menos 20% entre observações consecutivas ou desde a primeira observação retida na janela. Cada alerta inclui `from`, `to`, `changePercent`, `direction` e `scope`. São alterações de preço registradas, não prova de odd errada, valor esperado positivo ou preço ainda disponível. Oscilações entre as coletas de 30 minutos não são captadas.
+
+
+## Acompanhamento local por seleção
+
+No painel local, escolha a partida, o período e uma opção no filtro Seleção (Casa, Empate, Fora, totais ou dupla chance). Use Acompanhar para abrir gráfico e variações da mesma casa, jogo, mercado, período, linha e seleção. O histórico local mantém 72 horas em SQLite, importando os registros anteriores disponíveis.
+
+`http://127.0.0.1:4180/api/live/history?seriesId=ID&hours=72&limit=15000` consulta uma série identificada em cada outcome de `/api/live`. A janela aceita até 72 horas. Coletas não observadas não são reconstruídas. O painel público também permite filtrar Casa, Empate ou Fora no histórico pré-jogo.
+
+Os sinais pré-jogo incluem Abrir jogo quando existe sourceUrl da cotação. O link abre o evento fornecido pela fonte; não promete inclusão automática no bilhete. Mercado, seleção e odd precisam ser conferidos na casa.
