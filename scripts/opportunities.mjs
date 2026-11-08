@@ -1,4 +1,4 @@
-export const LIMITS={maxFinal:1.6,minHalf:3,prematchMaxAgeMs:300000,liveMaxAgeMs:40000};
+export const LIMITS={maxFinal:1.3,minHalf:2.5,prematchMaxAgeMs:300000,liveMaxAgeMs:40000};
 import {matching} from '../worker/backend.js';
 export function analyzeLiveComparisons(snapshot,now=Date.now()){
  const groups=[];
@@ -26,12 +26,13 @@ export function favouriteSignal(document,mode,now=Date.now()){
  if(!fresh(at,mode==='live'?LIMITS.liveMaxAgeMs:LIMITS.prematchMaxAgeMs,now)||e.sport!=='F'||e.isCybersport||e.tradingStatus!==1)return null;
  if(mode==='live'){
   const seconds=e.scoreboard?.timer?.currentTimeSeconds;
+  if(e.scoreboard?.stage!=null&&![1,10].includes(e.scoreboard.stage))return null;
   if(e.stage!==2||![0,1,2].includes(e.status)||!Number.isFinite(seconds)||seconds<0||seconds>=2700)return null;
  }else if(e.stage!==1||e.status!==0||e.startTime*1000<=now)return null;
  const ft=getPrices(document.markets,0),ht=getPrices(document.markets,1);if(!ft?.[0]||!ft?.[2])return null;
  const side=ft[0]<ft[2]?0:2;
- if(!(ft[side]<=LIMITS.maxFinal&&ht?.[side]>LIMITS.minHalf))return null;
- return {id:mode+'|favourite|'+document.id+'|'+side,mode,type:'favourite_first_half',eventId:document.id,event:e.name,selection:e.competitors?.[side===0?0:1]?.name,bookmakerId:'tobetano',finalOdds:ft[side],firstHalfOdds:ht[side],observedAt:at,startsAt:new Date(e.startTime*1000).toISOString(),scoreboard:e.scoreboard,rule:'Vitória final até 1,60 e vitória do mesmo time no 1º tempo acima de 3,00',note:mode==='live'?'Padrão de preço. No ao vivo, o tempo restante e o placar podem explicar a diferença; não confirma valor esperado positivo.':'Padrão de preço; exige comparação adicional para confirmar vantagem.'};
+ if(!(ft[side]<=LIMITS.maxFinal&&ht?.[side]>=LIMITS.minHalf))return null;
+ return {id:mode+'|favourite|'+document.id+'|'+side,mode,type:'favourite_first_half',eventId:document.id,event:e.name,selection:e.competitors?.[side===0?0:1]?.name,bookmakerId:'tobetano',finalOdds:ft[side],firstHalfOdds:ht[side],favouriteBasis:'Menor odd de vitória final da casa; não é avaliação estatística independente',statisticsStatus:'not_integrated',observedAt:at,startsAt:new Date(e.startTime*1000).toISOString(),scoreboard:e.scoreboard,rule:'Vitória final até 1,30 e vitória do mesmo favorito no 1º tempo a partir de 2,50',note:mode==='live'?'Padrão de preço. No ao vivo, o tempo restante e o placar podem explicar a diferença; não confirma valor esperado positivo.':'Padrão de preço; exige comparação adicional para confirmar vantagem.'};
 }
 export function analyzeLive(snapshot,now=Date.now()){
  const signals=[];for(const row of snapshot.events||[]){const s=favouriteSignal({id:row.id,event:row.event,markets:row.markets,observedAt:row.observedAt},'live',now);if(s)signals.push(s)}return signals;

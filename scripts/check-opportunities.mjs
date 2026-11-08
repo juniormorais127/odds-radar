@@ -15,3 +15,5 @@ const signals=analyzePrematch({events:[event],quotes},now);assert.equal(signals.
 assert.equal(analyzePrematch({events:[event],quotes:quotes.map(q=>({...q,method:'browser_manual'}))},now).length,0);
 assert.equal(analyzePrematch({events:[event],quotes:quotes.map(q=>({...q,observedAt:new Date(now-301000).toISOString()}))},now).length,0);
 console.log('Signals: fast live analysis, pre/live isolation, stale prices, settled periods, suspended odds and surebet calculation OK');
+
+const boundary=structuredClone(game);boundary.markets[0].marketItems[0].outcomes[0].decimalOdds=1.3;boundary.markets[1].marketItems[0].outcomes[0].decimalOdds=2.5;assert(favouriteSignal(boundary,'live',now));boundary.markets[0].marketItems[0].outcomes[0].decimalOdds=1.31;assert.equal(favouriteSignal(boundary,'live',now),null);boundary.markets[0].marketItems[0].outcomes[0].decimalOdds=1.3;boundary.markets[1].marketItems[0].outcomes[0].decimalOdds=2.49;assert.equal(favouriteSignal(boundary,'live',now),null);boundary.markets[1].marketItems[0].outcomes[0].decimalOdds=6;boundary.event.scoreboard.stage=3;assert.equal(favouriteSignal(boundary,'live',now),null);
