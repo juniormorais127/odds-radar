@@ -1,4 +1,5 @@
 export const LIMITS={maxFinal:1.3,minHalf:2.5,prematchMaxAgeMs:300000,liveMaxAgeMs:40000};
+import {tobetanoEventUrl} from './event-links.mjs';
 import {matching} from '../worker/backend.js';
 export function analyzeLiveComparisons(snapshot,now=Date.now()){
  const groups=[];
@@ -32,7 +33,7 @@ export function favouriteSignal(document,mode,now=Date.now()){
  const ft=getPrices(document.markets,0),ht=getPrices(document.markets,1);if(!ft?.[0]||!ft?.[2])return null;
  const side=ft[0]<ft[2]?0:2;
  if(!(ft[side]<=LIMITS.maxFinal&&ht?.[side]>=LIMITS.minHalf))return null;
- return {id:mode+'|favourite|'+document.id+'|'+side,mode,type:'favourite_first_half',eventId:document.id,event:e.name,selection:e.competitors?.[side===0?0:1]?.name,bookmakerId:'tobetano',finalOdds:ft[side],firstHalfOdds:ht[side],favouriteBasis:'Menor odd de vitória final da casa; não é avaliação estatística independente',statisticsStatus:'not_integrated',observedAt:at,startsAt:new Date(e.startTime*1000).toISOString(),scoreboard:e.scoreboard,stageName:e.stageName,rule:'Vitória final até 1,30 e vitória do mesmo favorito no 1º tempo a partir de 2,50',note:mode==='live'?'Padrão de preço. No ao vivo, o tempo restante e o placar podem explicar a diferença; não confirma valor esperado positivo.':'Padrão de preço; exige comparação adicional para confirmar vantagem.'};
+ return {id:mode+'|favourite|'+document.id+'|'+side,mode,type:'favourite_first_half',eventId:document.id,event:e.name,selection:e.competitors?.[side===0?0:1]?.name,bookmakerId:'tobetano',sourceUrl:document.sourceUrl||tobetanoEventUrl(document.id,e),finalOdds:ft[side],firstHalfOdds:ht[side],favouriteBasis:'Menor odd de vitória final da casa; não é avaliação estatística independente',statisticsStatus:'not_integrated',observedAt:at,startsAt:new Date(e.startTime*1000).toISOString(),scoreboard:e.scoreboard,stageName:e.stageName,rule:'Vitória final até 1,30 e vitória do mesmo favorito no 1º tempo a partir de 2,50',note:mode==='live'?'Padrão de preço. No ao vivo, o tempo restante e o placar podem explicar a diferença; não confirma valor esperado positivo.':'Padrão de preço; exige comparação adicional para confirmar vantagem.'};
 }
 export function analyzeLive(snapshot,now=Date.now()){
  const signals=[];for(const row of snapshot.events||[]){const s=favouriteSignal({id:row.id,event:row.event,markets:row.markets,observedAt:row.observedAt},'live',now);if(s)signals.push(s)}return signals;

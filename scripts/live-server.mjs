@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {tobetanoEventUrl} from './event-links.mjs';
 import {TelegramAlerts} from './telegram-alerts.mjs';
 import {marketAnomalies} from './market-anomalies.mjs';
 import {statusAlerts} from './status-alerts.mjs';
@@ -52,7 +53,7 @@ async function collect(){
   const listed=(await feed.query('GetLiveRichEventsBySport',['F'])).filter(r=>!r.isRemoved&&eligibleLive(r.value)),events=[],batches=[];
   for(let i=0;i<listed.length;i+=10)batches.push(listed.slice(i,i+10));
   let index=0;
-  await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,bookmakerId:'tobetano',bookmakerName:'Tobetano',event:{...r.value,stageName:marketDictionary.stages?.F?.[r.value.scoreboard?.stage]},observedAt:at,markets:labelMarkets(convertMarkets(rows.filter(m=>m.key?.eventId===r.key)),r.value,marketDictionary)})}}));
+  await Promise.all(Array.from({length:3},async()=>{while(index<batches.length){const group=batches[index++];const latest=(await feed.query('GetRichEventsByIds',[group.map(r=>r.key)])).filter(r=>!r.isRemoved&&eligibleLive(r.value));if(!latest.length)continue;const rows=await feed.query('GetMarketsByEventIds',[latest.map(r=>r.key),'true']);const at=new Date().toISOString();for(const r of latest)events.push({id:r.key,sourceUrl:tobetanoEventUrl(r.key,r.value),bookmakerId:'tobetano',bookmakerName:'Tobetano',event:{...r.value,stageName:marketDictionary.stages?.F?.[r.value.scoreboard?.stage]},observedAt:at,markets:labelMarkets(convertMarkets(rows.filter(m=>m.key?.eventId===r.key)),r.value,marketDictionary)})}}));
   const activeIds=new Set(events.map(e=>e.id)),missing=lifecycle.pending().filter(id=>!activeIds.has(id)).slice(0,100);
   if(missing.length){try{const ended=await feed.query('GetRichEventsByIds',[missing]);for(const r of ended)if(r.value?.scoreboard?.stage===9){const previous=lifecycle.rows.get(r.key);if(previous){lifecycle.observe({...previous,event:{...r.value,stageName:'Encerrado'}});const key=e=>({home:e.competitors?.[0]?.name||'',away:e.competitors?.[1]?.name||'',time:new Date(e.startTime*1000).toISOString()});for(const tracked of lifecycle.rows.values())if(tracked.id!==r.key&&!tracked.finishedAt&&matching(key(tracked.event),key(r.value)))lifecycle.observe({...tracked,event:{...tracked.event,scoreboard:r.value.scoreboard,stageName:'Encerrado'},confirmedBy:'tobetano'})}}}catch(e){console.error('Confirmação do encerramento: '+e.message)}}
   for(const g of events)lifecycle.observe(g);

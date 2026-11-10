@@ -136,3 +136,6 @@ O painel local analisa os mercados completos disponíveis da Tobetano ao vivo e 
 O servidor inclui um notificador desativado até configurar `data/telegram/config.json` (pasta ignorada pelo Git). Campos: `enabled`, `token`, `chatId` (ID negativo do grupo), `chatTitle` e lista opcional `types`. O token nunca é retornado pela API. `/api/telegram/status` mostra apenas situação, destino e último envio.
 
 Padrão: possíveis surebets, favorito/primeiro tempo, inversões de preços e divergências de início/fim. Listas de preços altos e diferenças simples ficam fora do envio padrão. Sinais antigos não são enviados; repetição usa intervalo de 10 minutos no ao vivo e 30 minutos no pré-jogo/status, com estado local persistido e limite de 20 mensagens por hora. Uma mensagem por ciclo de 3 segundos. O PC ligado e internet são necessários; não exige tokens de IA.
+
+
+Todos os sinais enviados ao Telegram exigem link específico de partida para cada casa envolvida. Links genéricos são rejeitados. Se alguma casa não fornece link validado, o sinal permanece no painel, mas não é enviado; `/api/telegram/status.skippedMissingLinks` mostra quantos foram ignorados na última verificação. Favorito/primeiro tempo e alertas de status incluem seus links correspondentes. O limite da mensagem preserva os links completos.
