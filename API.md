@@ -110,3 +110,10 @@ Os sinais pré-jogo incluem Abrir jogo quando existe sourceUrl da cotação. O l
 Possíveis surebets ao vivo exigem nomes/horário compatíveis, mesmo placar conhecido, mercado final de 90 minutos, odds não suspensas, menos de 40 segundos de idade e até 10 segundos entre consultas. Giro/Futamina são tratados como uma referência compartilhada. Não confirma aceitação nem liquidação.
 
 Jogos vistos como encerrados pelo estágio 9 (traduzido pelo fornecedor como Encerrado) permanecem na tela local sem odds disponíveis. O histórico ao vivo local e registros por hora do jogo são removidos 24 horas após a confirmação, com verificação a cada minuto. Confirmações podem ser propagadas entre fontes apenas com identidade/horário compatíveis. Ausência da lista significa Sem atualização, sem presumir fim. Histórico pré-jogo e snapshots públicos do GitHub mantêm sua política separada de 72 horas.
+
+
+## Escolha dos robôs locais
+
+O menu Casas que os robôs devem consultar salva uma lista comum para pré-jogo e ao vivo em `data/live/selected-houses.json`. Desmarcar uma casa impede novas consultas e retira suas odds e sinais das APIs atuais; uma consulta já em andamento pode concluir. O histórico não é apagado. Fontes em espera respeitam o agendamento e os intervalos de bloqueio. Uma lista vazia pausa todas as casas.
+
+`GET /api/collector-settings` retorna `{selected, houses}`. `PUT /api/collector-settings` recebe JSON `{selected: ["giro", "melbet"]}` e salva a seleção. A alteração é exclusiva do servidor local; o agendamento público do GitHub permanece separado.

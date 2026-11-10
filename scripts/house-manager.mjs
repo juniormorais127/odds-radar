@@ -2,11 +2,11 @@ import fs from 'node:fs/promises';
 import {adapters,HOUSE_NAMES} from './house-adapters.mjs';
 import {matching} from '../worker/backend.js';
 import {footballApi} from './football-api.mjs';
-export function createHouseManager(directory,onUpdate=()=>{}){
+export function createHouseManager(directory,onUpdate=()=>{},enabled=()=>true){
  const states=new Map(Object.entries(HOUSE_NAMES).map(([id,name])=>[id,{id,name,status:'waiting',pending:false,lastAttemptAt:null,lastSuccessAt:null,nextRunAt:null,error:null,partial:true,games:[],intervalSeconds:['two','sportsbet','stake','fortune'].includes(id)?1800:30}]));
  let active=0,queue=[],stopped=false;
- const status=()=>[...states.values()].map(({games,documents,...s})=>({...s,gameCount:games.length,quoteCount:games.length*3,scope:s.note||'Futebol pré-jogo, resultado final. Ao vivo é separado.'}));
- async function run(id){const state=states.get(id);if(stopped||state.pending)return;state.pending=true;state.status='collecting';state.lastAttemptAt=new Date().toISOString();state.nextRunAt=null;onUpdate();
+ const status=()=>[...states.values()].map(({games,documents,...s})=>({...s,enabled:enabled(s.id),gameCount:games.length,quoteCount:games.length*3,scope:s.note||'Futebol pré-jogo, resultado final. Ao vivo é separado.'}));
+ async function run(id){const state=states.get(id);if(!enabled(id)){state.status='disabled';state.nextRunAt=null;if(!stopped)setTimeout(()=>enqueue(id),5000);return;}if(stopped||state.pending)return;state.pending=true;state.status='collecting';state.lastAttemptAt=new Date().toISOString();state.nextRunAt=null;onUpdate();
   try{const result=await adapters[id]();const at=result.at||new Date().toISOString();if(!result.games?.length)throw Error('Nenhuma odd válida retornada');
    const old=new Map(state.games.map(g=>[[g.home,g.away,new Date(g.time).toISOString()].join('|'),g]));const changes=[];
    for(const game of result.games){if(!Number.isFinite(Date.parse(game.time)))continue;const previous=old.get([game.home,game.away,new Date(game.time).toISOString()].join('|'));for(let i=0;i<3;i++){if(!Number.isFinite(game.odds[i])||game.odds[i]<=1||previous?.odds[i]===game.odds[i])continue;changes.push({bookmakerId:id,bookmakerName:state.name,home:game.home,away:game.away,startsAt:game.time,market:'ft_1x2',selection:['home','draw','away'][i],observedAt:at,before:previous?.odds[i]??null,after:game.odds[i]})}}
@@ -21,6 +21,7 @@ export function createHouseManager(directory,onUpdate=()=>{}){
  function snapshot(){
   const sources=[],games=[],buckets=new Map();
   for(const s of states.values()){
+   if(!enabled(s.id))continue;
    const usable=s.status==='success'||s.status==='collecting';sources.push({key:s.id,ok:usable,at:usable?s.lastSuccessAt:s.lastAttemptAt,partial:s.partial,count:s.games.length,error:s.error,offline:s.status==='historical',note:s.note});
    for(const row of s.games){const time=Date.parse(row.time);if(!Number.isFinite(time)||time<=Date.now()||!row.odds?.every(o=>Number.isFinite(o)&&o>1)||row.odds.length!==3)continue;
     const minute=Math.floor(time/60000),possible=[-1,0,1].flatMap(offset=>buckets.get(minute+offset)||[]);let target=possible.find(g=>matching(g,row));
@@ -30,5 +31,5 @@ export function createHouseManager(directory,onUpdate=()=>{}){
   }
   return footballApi({at:new Date().toISOString(),games,sources});
  }
- return {status,snapshot,documents:()=>[...states.values()].flatMap(s=>s.status==='success'||s.status==='collecting'?s.documents||[]:[]),house:id=>states.get(id)||null,start(){for(const id of states.keys())enqueue(id)},stop(){stopped=true;queue=[]}};
+ return {status,snapshot,documents:()=>[...states.values()].flatMap(s=>enabled(s.id)&&(s.status==='success'||s.status==='collecting')?s.documents||[]:[]),house:id=>states.get(id)||null,start(){for(const id of states.keys())enqueue(id)},stop(){stopped=true;queue=[]}};
 }
