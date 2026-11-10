@@ -124,3 +124,8 @@ O menu Casas que os robôs devem consultar salva uma lista comum para pré-jogo 
 Tela local `/status-alerts.html` e API `/api/status-alerts`: comparam registros brutos das coletas de pré-jogo, inclusive horários que já passaram, com referências ao vivo recentes (40 segundos) ou encerramento confirmado nas últimas 24 horas. Pré-jogo deve ter observação de até 90 segundos e odds válidas. Casas desmarcadas e referências do mesmo fornecedor Giro/Futamina não são comparadas entre si.
 
 O pareamento exige nomes compatíveis na mesma ordem, horário com diferença máxima de duas horas e ausência de múltiplos inícios possíveis. Início listado não é medição do instante real de início. Resultado indica divergência entre fontes, sem confirmação independente nem garantia de aceitação. Não usa o horário passado, sozinho, como prova de início ou fim. Fontes sem coleta ao vivo, ligas fora da cobertura e identidades divergentes podem ficar sem referência.
+
+
+## Outros mercados: possíveis anomalias
+
+O painel local analisa os mercados completos disponíveis da Tobetano ao vivo e os documentos de favoritos pré-jogo coletados. Inclui `market_price_inversion` (diferença maior que 10% entre linhas de meia unidade que deveriam respeitar inclusão de resultados, ou dupla chance acima da vitória simples) e `corners_high_review` (menos de até 10 escanteios com odd de pelo menos 3,00). O segundo é apenas uma lista para análise, sem estimativa de probabilidade ou comprovação de erro. Linhas asiáticas de quarto/integer push não entram na comparação de inclusão. Períodos encerrados, mercados removidos e odds suspensas são descartados. Novas casas com somente 1X2 não recebem cobertura fictícia de outros mercados.

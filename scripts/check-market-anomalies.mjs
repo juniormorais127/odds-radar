@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {marketAnomalies} from './market-anomalies.mjs';
+const now=Date.now(),at=new Date(now).toISOString();
+const total=(line,under,over=2)=>({key:{marketParameters:[line]},outcomes:[{key:{type:5},decimalOdds:under,name:'Menos de '+line},{key:{type:4},decimalOdds:over,name:'Mais de '+line}]});
+const doc={id:'g',observedAt:at,bookmakerId:'tobetano',event:{sport:'F',stage:2,tradingStatus:1,name:'A - B',scoreboard:{stage:1,timer:{currentTimeSeconds:1200}}},markets:[{key:{resultKind:4,marketType:5,period:0},name:'Total',resultKindName:'Escanteios',marketItems:[total(8.5,2),total(9.5,4)]}]};
+const s=marketAnomalies(doc,'live',now);assert(s.some(s=>s.type==='market_price_inversion'));assert(s.some(s=>s.type==='corners_high_review'&&s.severity==='review'));
+const normal=structuredClone(doc);normal.markets[0].marketItems[1].outcomes[0].decimalOdds=1.5;assert.equal(marketAnomalies(normal,'live',now).length,0);
+const frozen=structuredClone(doc);frozen.markets[0].marketItems[1].outcomes[0].isFrozen=true;assert.equal(marketAnomalies(frozen,'live',now).length,0);
+const quarter=structuredClone(doc);quarter.markets[0].marketItems[1].key.marketParameters=[9.25];assert(!marketAnomalies(quarter,'live',now).some(s=>s.type==='market_price_inversion'));
+const period=structuredClone(doc);period.markets[0].key.period=1;period.event.scoreboard.stage=3;assert.equal(marketAnomalies(period,'live',now).length,0);
+const removed=structuredClone(doc);removed.markets[0].isRemoved=true;assert.equal(marketAnomalies(removed,'live',now).length,0);
+assert.equal(marketAnomalies({...doc,observedAt:new Date(now-41000).toISOString()},'live',now).length,0);
+const double=structuredClone(doc);double.markets=[{key:{resultKind:1,marketType:2,period:0},marketItems:[{key:{marketParameters:[]},outcomes:[{key:{type:0},decimalOdds:1.3}]}]},{key:{resultKind:1,marketType:3,period:0},marketItems:[{key:{marketParameters:[]},outcomes:[{key:{type:8},decimalOdds:2}]}]}];assert.equal(marketAnomalies(double,'live',now).length,1);
+console.log('Market anomalies: line containment, corner review, frozen/removed exclusion, quarter-line and period isolation OK');

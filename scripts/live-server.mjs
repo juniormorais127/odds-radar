@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {marketAnomalies} from './market-anomalies.mjs';
 import {statusAlerts} from './status-alerts.mjs';
 import {HOUSE_NAMES} from './house-adapters.mjs';
 import {matching} from '../worker/backend.js';
@@ -34,7 +35,7 @@ let retentionBusy=false;
 async function expireFinished(){if(retentionBusy)return;retentionBusy=true;const expired=lifecycle.expire();try{for(const g of expired)liveHistory.deleteEvent(g.id);if(expired.length)await purgeLiveJournals(dir+'/history',new Set(expired.map(g=>g.id)));lifecycle.save()}catch(e){for(const g of expired)lifecycle.rows.set(g.id,g);lifecycle.save();console.error('Limpeza de jogos encerrados: '+e.message)}finally{retentionBusy=false}}
 setInterval(expireFinished,60000).unref();
 let preAnalysisTimer;
-const houseManager=createHouseManager(path.join(root,'data/robots'),()=>{clearTimeout(preAnalysisTimer);preAnalysisTimer=setTimeout(()=>{const start=performance.now();const api=houseManager.snapshot();preSignals=analyzePrematch(api);preFavourites=houseManager.documents().flatMap(d=>{const signal=favouriteSignal(d,'prematch');return signal?[signal]:[]});preSourceAt=api.quotes.filter(q=>q.method==='automatic'&&q.freshness==='current').map(q=>q.observedAt).sort().at(-1)||null;preAnalyzedAt=new Date().toISOString();preAnalysisMs=performance.now()-start;preError=null;broadcast()},200)},enabled);
+const houseManager=createHouseManager(path.join(root,'data/robots'),()=>{clearTimeout(preAnalysisTimer);preAnalysisTimer=setTimeout(()=>{const start=performance.now();const api=houseManager.snapshot();preSignals=analyzePrematch(api);preFavourites=houseManager.documents().flatMap(d=>{const signal=favouriteSignal(d,'prematch');return [...(signal?[signal]:[]),...marketAnomalies(d,'prematch')]});preSourceAt=api.quotes.filter(q=>q.method==='automatic'&&q.freshness==='current').map(q=>q.observedAt).sort().at(-1)||null;preAnalyzedAt=new Date().toISOString();preAnalysisMs=performance.now()-start;preError=null;broadcast()},200)},enabled);
 const checkStatusAlerts=()=>{const now=Date.now(),rows=houseManager.monitorRows().filter(p=>now-Date.parse(p.observedAt)>=0&&now-Date.parse(p.observedAt)<=90000),refs=combined().events.filter(g=>g.finishedAt||(!g.lifecycle&&now-Date.parse(g.observedAt)>=0&&now-Date.parse(g.observedAt)<=40000));return {generatedAt:new Date(now).toISOString(),alerts:statusAlerts(rows,refs,now),prematchRows:rows.length,referenceRows:refs.length,houses:HOUSE_NAMES}};
 let statusMonitorBusy=false;
 setInterval(async()=>{if(statusMonitorBusy)return;statusMonitorBusy=true;try{await fs.writeFile(dir+'/status-alerts.tmp',JSON.stringify(checkStatusAlerts()));await fs.rename(dir+'/status-alerts.tmp',dir+'/status-alerts.json')}catch(e){console.error('Monitor de status: '+e.message)}finally{statusMonitorBusy=false}},20000).unref();
@@ -56,7 +57,7 @@ async function collect(){
   lifecycle.save();
   const fresh={bookmakerId:'tobetano',mode:'live',observedAt:new Date().toISOString(),intervalSeconds:20,events};
   liveHistory.attach({...fresh,events:[...fresh.events,...liveHouses.events()]});
-  const analysisStart=performance.now();liveSignals=analyzeLive(fresh);liveAnalysisMs=performance.now()-analysisStart;
+  const analysisStart=performance.now();liveSignals=[...analyzeLive(fresh),...fresh.events.flatMap(g=>marketAnomalies(g,'live'))];liveAnalysisMs=performance.now()-analysisStart;
   fresh.movements=priceMovements(snapshot,fresh);snapshot=fresh;lastSuccessfulAt=fresh.observedAt;lastError=null;
   liveHistory.append(fresh.movements);
   liveHistory.prune();

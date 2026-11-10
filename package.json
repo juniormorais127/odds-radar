@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node scripts/server.mjs",
     "build": "node scripts/prepare.mjs",
-    "test": "node scripts/check.mjs && node scripts/check-catalog.mjs && node scripts/check-monitor.mjs && node scripts/check-fallback.mjs && node scripts/check-futamina.mjs && node scripts/check-registered-houses.mjs && node scripts/check-browser-quotes.mjs && node scripts/check-football-api.mjs && node scripts/check-odds-history.mjs && node scripts/check-tobetano.mjs && node scripts/check-live.mjs && node scripts/check-opportunities.mjs && node scripts/check-market-labels.mjs && node scripts/check-house-robots.mjs && node scripts/check-live-history.mjs && node scripts/check-live-multihouse.mjs && node scripts/check-status-alerts.mjs",
+    "test": "node scripts/check.mjs && node scripts/check-catalog.mjs && node scripts/check-monitor.mjs && node scripts/check-fallback.mjs && node scripts/check-futamina.mjs && node scripts/check-registered-houses.mjs && node scripts/check-browser-quotes.mjs && node scripts/check-football-api.mjs && node scripts/check-odds-history.mjs && node scripts/check-tobetano.mjs && node scripts/check-live.mjs && node scripts/check-opportunities.mjs && node scripts/check-market-labels.mjs && node scripts/check-house-robots.mjs && node scripts/check-live-history.mjs && node scripts/check-live-multihouse.mjs && node scripts/check-status-alerts.mjs && node scripts/check-market-anomalies.mjs",
     "live": "node scripts/live-server.mjs"
   },
   "devDependencies": {
