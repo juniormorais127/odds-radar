@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {parseApostaFootball} from './collect-apostacerta.mjs';
+const now=Date.now(),e={desc:{sport:'1',type:'match',scheduled:now/1000+3600,competitors:[{name:'A'},{name:'B'}],category:'c'},state:{status:0},markets:{1:{'':{1:{k:'1.3'},2:{k:'4'},3:{k:'8'}}}}};
+const snapshot={mode:'prematch',observedAt:new Date(now).toISOString(),data:{events:{game:e},categories:{c:{name:'Brasil'}},tournaments:{}}};
+assert.deepEqual(parseApostaFootball(snapshot,now).quotes.map(q=>[q.selection,q.decimalOdds]),[['home',1.3],['draw',4],['away',8]]);
+const blocked=structuredClone(snapshot);blocked.data.events.game.markets[1][''][1].b=1;assert.equal(parseApostaFootball(blocked,now).quotes.length,0);
+const virtual=structuredClone(snapshot);virtual.data.categories.c.slug='esoccer';assert.equal(parseApostaFootball(virtual,now).events.length,0);
+assert.equal(parseApostaFootball(snapshot,now+7200000).events.length,0);
+const live=structuredClone(snapshot);live.mode='live';live.data.events.game.state={status:1,clock:{match_time:'12:34'}};live.data.events.game.score={home_score:'2',away_score:'1'};assert.equal(parseApostaFootball(live,now).events[0].clock,'12:34');assert.equal(parseApostaFootball(live,now).events[0].score.home,'2');
+live.data.events.game.state.status=2;assert.equal(parseApostaFootball(live,now).events.length,0);
+console.log('Aposta Certa: selection order, decimal odds, suspensions, virtual exclusion and pre/live isolation OK');

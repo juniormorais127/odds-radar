@@ -139,3 +139,10 @@ Padrão: possíveis surebets, favorito/primeiro tempo, inversões de preços e d
 
 
 Todos os sinais enviados ao Telegram exigem link específico de partida para cada casa envolvida. Links genéricos são rejeitados. Se alguma casa não fornece link validado, o sinal permanece no painel, mas não é enviado; `/api/telegram/status.skippedMissingLinks` mostra quantos foram ignorados na última verificação. Favorito/primeiro tempo e alertas de status incluem seus links correspondentes. O limite da mensagem preserva os links completos.
+
+
+## Aposta Certa: extração pública validada
+
+`node scripts/collect-apostacerta.mjs` descobre a configuração anônima em `https://apostacerta.bet/api/betby/config`, lê a biblioteca pública Betby e coleta os snapshots v4 de `prematch` e `live`, sem login nem token de usuário. A rota inicial termina em `/0` e devolve versões; é necessário buscar imediatamente `top_events_versions` e `rest_events_versions` no mesmo prefixo para obter eventos e mercados. Versões expiram rapidamente; não devem ser fixadas no código.
+
+Arquivos em `collector-output/apostacerta/{prematch,live}.json`, com futebol real, mercados originais e 1X2 normalizado. Odds `b` bloqueadas são excluídas das cotações normalizadas; categorias virtuais e eventos fora do estágio solicitado também são excluídos. Coletor ainda independente dos robôs recorrentes e sem link direto de partida validado. Essa API é interna do frontend, não há garantia de estabilidade ou redistribuição comercial.
