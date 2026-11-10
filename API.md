@@ -129,3 +129,10 @@ O pareamento exige nomes compatíveis na mesma ordem, horário com diferença m�
 ## Outros mercados: possíveis anomalias
 
 O painel local analisa os mercados completos disponíveis da Tobetano ao vivo e os documentos de favoritos pré-jogo coletados. Inclui `market_price_inversion` (diferença maior que 10% entre linhas de meia unidade que deveriam respeitar inclusão de resultados, ou dupla chance acima da vitória simples) e `corners_high_review` (menos de até 10 escanteios com odd de pelo menos 3,00). O segundo é apenas uma lista para análise, sem estimativa de probabilidade ou comprovação de erro. Linhas asiáticas de quarto/integer push não entram na comparação de inclusão. Períodos encerrados, mercados removidos e odds suspensas são descartados. Novas casas com somente 1X2 não recebem cobertura fictícia de outros mercados.
+
+
+## Telegram local
+
+O servidor inclui um notificador desativado até configurar `data/telegram/config.json` (pasta ignorada pelo Git). Campos: `enabled`, `token`, `chatId` (ID negativo do grupo), `chatTitle` e lista opcional `types`. O token nunca é retornado pela API. `/api/telegram/status` mostra apenas situação, destino e último envio.
+
+Padrão: possíveis surebets, favorito/primeiro tempo, inversões de preços e divergências de início/fim. Listas de preços altos e diferenças simples ficam fora do envio padrão. Sinais antigos não são enviados; repetição usa intervalo de 10 minutos no ao vivo e 30 minutos no pré-jogo/status, com estado local persistido e limite de 20 mensagens por hora. Uma mensagem por ciclo de 3 segundos. O PC ligado e internet são necessários; não exige tokens de IA.
