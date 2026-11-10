@@ -31,5 +31,5 @@ export function createHouseManager(directory,onUpdate=()=>{},enabled=()=>true){
   }
   return footballApi({at:new Date().toISOString(),games,sources});
  }
- return {status,snapshot,documents:()=>[...states.values()].flatMap(s=>enabled(s.id)&&(s.status==='success'||s.status==='collecting')?s.documents||[]:[]),house:id=>states.get(id)||null,start(){for(const id of states.keys())enqueue(id)},stop(){stopped=true;queue=[]}};
+ return {monitorRows:()=>[...states.values()].flatMap(s=>enabled(s.id)&&['success','collecting'].includes(s.status)?s.games.map(g=>({...g,bookmakerId:s.id,bookmakerName:s.name,observedAt:s.lastSuccessAt})):[]),status,snapshot,documents:()=>[...states.values()].flatMap(s=>enabled(s.id)&&(s.status==='success'||s.status==='collecting')?s.documents||[]:[]),house:id=>states.get(id)||null,start(){for(const id of states.keys())enqueue(id)},stop(){stopped=true;queue=[]}};
 }

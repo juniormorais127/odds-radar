@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {statusAlerts} from './status-alerts.mjs';
 import {HOUSE_NAMES} from './house-adapters.mjs';
 import {matching} from '../worker/backend.js';
 import {createLiveHouses} from './live-houses.mjs';
@@ -34,6 +35,9 @@ async function expireFinished(){if(retentionBusy)return;retentionBusy=true;const
 setInterval(expireFinished,60000).unref();
 let preAnalysisTimer;
 const houseManager=createHouseManager(path.join(root,'data/robots'),()=>{clearTimeout(preAnalysisTimer);preAnalysisTimer=setTimeout(()=>{const start=performance.now();const api=houseManager.snapshot();preSignals=analyzePrematch(api);preFavourites=houseManager.documents().flatMap(d=>{const signal=favouriteSignal(d,'prematch');return signal?[signal]:[]});preSourceAt=api.quotes.filter(q=>q.method==='automatic'&&q.freshness==='current').map(q=>q.observedAt).sort().at(-1)||null;preAnalyzedAt=new Date().toISOString();preAnalysisMs=performance.now()-start;preError=null;broadcast()},200)},enabled);
+const checkStatusAlerts=()=>{const now=Date.now(),rows=houseManager.monitorRows().filter(p=>now-Date.parse(p.observedAt)>=0&&now-Date.parse(p.observedAt)<=90000),refs=combined().events.filter(g=>g.finishedAt||(!g.lifecycle&&now-Date.parse(g.observedAt)>=0&&now-Date.parse(g.observedAt)<=40000));return {generatedAt:new Date(now).toISOString(),alerts:statusAlerts(rows,refs,now),prematchRows:rows.length,referenceRows:refs.length,houses:HOUSE_NAMES}};
+let statusMonitorBusy=false;
+setInterval(async()=>{if(statusMonitorBusy)return;statusMonitorBusy=true;try{await fs.writeFile(dir+'/status-alerts.tmp',JSON.stringify(checkStatusAlerts()));await fs.rename(dir+'/status-alerts.tmp',dir+'/status-alerts.json')}catch(e){console.error('Monitor de status: '+e.message)}finally{statusMonitorBusy=false}},20000).unref();
 const opportunities=()=>({generatedAt:new Date().toISOString(),live:{sourceAt:snapshot.observedAt,analysisMs:liveAnalysisMs,stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000,bookmakers:['tobetano',...liveHouses.status().filter(s=>s.status==='success').map(s=>s.id)],sources:liveHouses.status(),eventsAnalyzed:combined().events.filter(e=>!e.lifecycle).length,limits:'Um feed ao vivo: identifica padrÃµes de preÃ§o, sem confirmar arbitragem entre casas.'},prematch:{sourceAt:preSourceAt,analyzedAt:preAnalyzedAt,analysisMs:preAnalysisMs,error:preError,refreshSeconds:30,limits:'RobÃ´s locais por casa, intervalo-alvo de 30 segundos, sem sobrepor coletas; duração e fila podem ampliar o intervalo. Cobertura parcial. Fontes bloqueadas ficam fora. Primeiro tempo: favoritos da Tobetano.'},signals:[...liveSignals,...analyzeLiveComparisons(combined()),...preSignals,...preFavourites].filter(s=>{const age=Date.now()-Date.parse(s.observedAt);const ids=s.picks?s.picks.map(p=>p.bookmakerId):s.best?[s.best.bookmakerId,s.other.bookmakerId]:[s.bookmakerId];return ids.every(enabled)&&age>=0&&age<=(s.mode==='live'?LIMITS.liveMaxAgeMs:LIMITS.prematchMaxAgeMs)})});
 try{snapshot=JSON.parse(await fs.readFile(dir+'/latest.json','utf8'))}catch(e){if(e.code!=='ENOENT')console.error('Snapshot local invÃ¡lido; aguardando coleta nova')}
 const status=()=>({service:'odds-radar-live',intervalSeconds:20,scope:'Tobetano Â· futebol ao vivo',running:true,pending,cycle,lastAttemptAt,lastSuccessfulAt,nextAt,lastError,observedAt:snapshot.observedAt,ageSeconds:snapshot.observedAt?(Date.now()-Date.parse(snapshot.observedAt))/1000:null,events:combined().events.filter(e=>!e.lifecycle).length,quotes:combined().events.reduce((n,e)=>n+e.markets.reduce((total,m)=>total+m.marketItems.reduce((count,i)=>count+i.outcomes.length,0),0),0),stale:!lastSuccessfulAt||Date.now()-Date.parse(lastSuccessfulAt)>40000});
@@ -69,6 +73,8 @@ const server=http.createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1:4180');res.setHeader('Cache-Control','no-store');res.setHeader('X-Content-Type-Options','nosniff');
   const origin=req.headers.origin;if(origin==='https://juniormorais127.github.io'||/^http:\/\/(127\.0\.0\.1|localhost):4180$/.test(origin||'')){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');res.setHeader('Access-Control-Allow-Private-Network','true')}
   if(req.method==='OPTIONS'){res.setHeader('Access-Control-Allow-Methods','GET, OPTIONS');res.writeHead(204);return res.end()}
+  if(url.pathname==='/api/status-alerts'){res.setHeader('Content-Type','application/json');return res.end(JSON.stringify(checkStatusAlerts()))}
+  if(url.pathname==='/status-alerts.html'){res.setHeader('Content-Type','text/html;charset=utf-8');return res.end(await fs.readFile(root+'/worker/status-alerts.html'))}
   if(url.pathname==='/api/collector-settings'){
    res.setHeader('Content-Type','application/json');
    if(req.method==='PUT'){

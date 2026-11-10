@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {statusAlerts} from './status-alerts.mjs';
+const now=Date.now(),at=new Date(now).toISOString();
+const pre={bookmakerId:'giro',home:'Home FC',away:'Away FC',time:new Date(now+1800000).toISOString(),odds:[1.3,4,8],observedAt:at};
+const ref={id:'one',bookmakerId:'tobetano',observedAt:at,event:{stage:2,startTime:now/1000,competitors:[{name:'Home'},{name:'Away'}],scoreboard:{scores:[]}}};
+assert.equal(statusAlerts([pre],[ref],now)[0].scheduleDifferenceMinutes,30);
+assert.equal(statusAlerts([pre],[],now).length,0);
+assert.equal(statusAlerts([pre],[{...ref,observedAt:new Date(now-41000).toISOString()}],now).length,0);
+assert.equal(statusAlerts([pre],[{...ref,bookmakerId:'futamina'}],now).length,0);
+assert.equal(statusAlerts([pre],[{...ref,lifecycle:'unavailable'}],now).length,0);
+assert.equal(statusAlerts([pre],[ref,{...ref,event:{...ref.event,startTime:ref.event.startTime+1800}}],now).length,0);
+const ended={...ref,finishedAt:at,lifecycle:'finished',event:{...ref.event,stage:3}};
+assert.equal(statusAlerts([pre],[ended],now)[0].type,'finished_as_prematch');
+assert.equal(statusAlerts([pre],[ref,ended],now).length,0);
+assert.equal(statusAlerts([{...pre,observedAt:new Date(now-91000).toISOString()}],[ref],now).length,0);
+console.log('Status alerts: shifted kickoff, live/finished evidence, freshness, ambiguity and shared-feed exclusion OK');

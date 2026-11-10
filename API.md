@@ -117,3 +117,10 @@ Jogos vistos como encerrados pelo estágio 9 (traduzido pelo fornecedor como Enc
 O menu Casas que os robôs devem consultar salva uma lista comum para pré-jogo e ao vivo em `data/live/selected-houses.json`. Desmarcar uma casa impede novas consultas e retira suas odds e sinais das APIs atuais; uma consulta já em andamento pode concluir. O histórico não é apagado. Fontes em espera respeitam o agendamento e os intervalos de bloqueio. Uma lista vazia pausa todas as casas.
 
 `GET /api/collector-settings` retorna `{selected, houses}`. `PUT /api/collector-settings` recebe JSON `{selected: ["giro", "melbet"]}` e salva a seleção. A alteração é exclusiva do servidor local; o agendamento público do GitHub permanece separado.
+
+
+## Divergências de status e início
+
+Tela local `/status-alerts.html` e API `/api/status-alerts`: comparam registros brutos das coletas de pré-jogo, inclusive horários que já passaram, com referências ao vivo recentes (40 segundos) ou encerramento confirmado nas últimas 24 horas. Pré-jogo deve ter observação de até 90 segundos e odds válidas. Casas desmarcadas e referências do mesmo fornecedor Giro/Futamina não são comparadas entre si.
+
+O pareamento exige nomes compatíveis na mesma ordem, horário com diferença máxima de duas horas e ausência de múltiplos inícios possíveis. Início listado não é medição do instante real de início. Resultado indica divergência entre fontes, sem confirmação independente nem garantia de aceitação. Não usa o horário passado, sozinho, como prova de início ou fim. Fontes sem coleta ao vivo, ligas fora da cobertura e identidades divergentes podem ficar sem referência.
