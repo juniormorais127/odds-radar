@@ -11,5 +11,5 @@ const manager=createHouseManager('unused');const time=new Date(Date.now()+864000
 for(const id of ['giro','grana'])Object.assign(manager.house(id),{status:'success',lastSuccessAt:at,games:[{home:'A',away:'B',time,odds:[1.5,3,4],url:'https://example.com'}]});
 let api=manager.snapshot();assert.equal(api.events.length,1);assert.equal(api.quotes.length,6);
 manager.house('grana').status='blocked';manager.house('grana').error='HTTP 403';api=manager.snapshot();assert.equal(api.quotes.filter(q=>q.bookmakerId==='giro'&&q.freshness==='current').length,3);assert(api.quotes.filter(q=>q.bookmakerId==='grana').every(q=>q.freshness==='historical'));
-assert(manager.status().every(s=>!('games'in s)&&!('documents'in s)));assert.equal(manager.status().length,12);
+assert(manager.status().every(s=>!('games'in s)&&!('documents'in s)));assert.equal(manager.status().length,13);
 console.log('House robots: Granawin selection mapping, live/suspension exclusion, timezone, source isolation and truthful status OK');

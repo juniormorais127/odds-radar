@@ -2,7 +2,9 @@ import fs from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 const origin='https://apostacerta.bet';
 async function get(url,json=true){const r=await fetch(url,{signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('HTTP '+r.status);return json?r.json():r.text()}
-export async function apostaConfig(){
+let cachedConfig=null,configAt=0,configPending=null;
+export async function apostaConfig(){if(cachedConfig&&Date.now()-configAt<3600000)return cachedConfig;if(configPending)return configPending;configPending=loadConfig().then(c=>{cachedConfig=c;configAt=Date.now();return c}).finally(()=>{configPending=null});return configPending}
+async function loadConfig(){
  const config=await get(origin+'/api/betby/config');
  if(!/^\d+$/.test(config.brandId||''))throw Error('Identificador público não encontrado');
  const library=new URL(config.libraryUrl);if(library.protocol!=='https:'||!library.hostname.endsWith('.sptpub.com'))throw Error('Biblioteca fora do fornecedor esperado');
@@ -35,5 +37,6 @@ export function parseApostaFootball(snapshot,now=Date.now()){
  }
  return {generatedAt:observedAt,bookmakerId:'apostacerta',bookmakerName:'Aposta Certa',mode,sourceApi:snapshot.sourceUrl,coverage:{sport:'football',normalizedMarkets:['ft_1x2'],complete:false,note:'Outros mercados preservados em rawMarkets por código original, sem interpretação não validada. Link direto de partida ainda não validado.'},events,quotes};
 }
+export async function collectAposta(mode){return parseApostaFootball(await apostaSnapshot(await apostaConfig(),mode))}
 async function main(){const config=await apostaConfig(),output='collector-output/apostacerta';await fs.mkdir(output,{recursive:true});for(const mode of ['prematch','live']){const snapshot=await apostaSnapshot(config,mode),data=parseApostaFootball(snapshot);await fs.writeFile(output+'/'+mode+'.json',JSON.stringify(data));console.log(JSON.stringify({house:'Aposta Certa',mode,observedAt:data.generatedAt,events:data.events.length,quotes:data.quotes.length,file:output+'/'+mode+'.json',api:data.sourceApi,sample:data.events.slice(0,1).map(e=>({home:e.home,away:e.away,score:e.score,clock:e.clock,odds:data.quotes.filter(q=>q.eventId===e.id).map(q=>({selection:q.selectionLabel,odd:q.decimalOdds}))}))}))}}
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])main().catch(e=>{console.error('Aposta Certa: '+e.message);process.exitCode=1});

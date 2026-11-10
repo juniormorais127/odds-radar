@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-export const houses={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',two:'2UP',grana:'Granawin',sportsbet:'Sportsbet.io',exclusive:'ExclusiveBet',stake:'Stake',fortune:'FortuneJack',tobetano:'Tobetano'};
+export const houses={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',two:'2UP',grana:'Granawin',sportsbet:'Sportsbet.io',exclusive:'ExclusiveBet',stake:'Stake',fortune:'FortuneJack',tobetano:'Tobetano',apostacerta:'Aposta Certa'};
 const id=value=>createHash('sha256').update(value).digest('hex').slice(0,24);
 const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 export function footballApi(data,collection,now=Date.now()){

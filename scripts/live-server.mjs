@@ -91,7 +91,7 @@ const server=http.createServer(async(req,res)=>{
     if(!Array.isArray(d.selected)||!d.selected.every(id=>typeof id==='string'&&HOUSE_NAMES[id])){res.writeHead(400);return res.end(JSON.stringify({error:'Seleção de casas inválida'}))}
     const next=[...new Set(d.selected)];await fs.writeFile(dir+'/selected-houses.tmp',JSON.stringify(next));await fs.rename(dir+'/selected-houses.tmp',dir+'/selected-houses.json');selectedHouses=next;broadcast();
    }else if(req.method!=='GET'){res.writeHead(405);return res.end()}
-   return res.end(JSON.stringify({selected:selectedHouses,houses:Object.entries(HOUSE_NAMES).map(([id,name])=>({id,name,live:['tobetano','giro','futamina','melbet'].includes(id)}))}))
+   return res.end(JSON.stringify({selected:selectedHouses,houses:Object.entries(HOUSE_NAMES).map(([id,name])=>({id,name,live:['tobetano','giro','futamina','melbet','apostacerta'].includes(id)}))}))
   }
   if(url.pathname==='/collector-settings.js'){res.setHeader('Content-Type','text/javascript;charset=utf-8');return res.end(await fs.readFile(root+'/worker/collector-settings.js'))}
   if(req.method!=='GET'){res.writeHead(405);return res.end('Somente leitura')}

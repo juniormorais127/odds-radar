@@ -1,7 +1,8 @@
+import {collectAposta} from './collect-apostacerta.mjs';
 import {tobetanoEventUrl} from './event-links.mjs';
 import {houseCollectors} from '../worker/backend.js';
 import {publicConfig,connectFeed,eligiblePrematch,convertMarkets,finalOdds} from './tobetano-feed.mjs';
-export const HOUSE_NAMES={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',tobetano:'Tobetano',grana:'Granawin',exclusive:'ExclusiveBet',two:'2UP',sportsbet:'Sportsbet.io',stake:'Stake',fortune:'FortuneJack'};
+export const HOUSE_NAMES={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',tobetano:'Tobetano',grana:'Granawin',exclusive:'ExclusiveBet',two:'2UP',sportsbet:'Sportsbet.io',stake:'Stake',fortune:'FortuneJack',apostacerta:'Aposta Certa'};
 export const GRANA_URL='https://platform.granawin-go.com/api/event/list?lang=pt&relations=odds&relations=league&relations=competitors&relations=result&oddsExists_eq=1&main=1&period=0&sportId_eq=1&limit=50&status_in=0&oddsBooster=0&isFavorite=0&isLive=false';
 const json=async url=>{const r=await fetch(url,{signal:AbortSignal.timeout(20000)});if(!r.ok)throw Error('HTTP '+r.status);return r.json()};
 export function parseGrana(data,now=Date.now()){
@@ -51,4 +52,5 @@ export async function exclusive(){
  if(!games.length)throw Error('Nenhuma odd válida nas ligas públicas consultadas');return {games:[...new Map(games.map(g=>[g.url,g])).values()],partial:true,failures,note:'Ligas de futebol disponíveis no menu público; resultado final pré-jogo. Novos eventos descobertos a cada coleta.'};
 }
 const blocked={two:'https://2up.io/pt-br/sports/soccer',sportsbet:'https://sportsbet.io/pt/sports/soccer',stake:'https://stake.com/pt/sports/soccer',fortune:'https://fortunejack.com/pt/crypto-sportsbook'};
-export const adapters={...houseCollectors,grana,exclusive,tobetano,...Object.fromEntries(Object.entries(blocked).map(([id,url])=>[id,async()=>{const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('HTTP '+r.status+'; não foi contornado o bloqueio');throw Error('Página respondeu, mas não há parser validado para novas odds nesta fonte')}]))};
+export async function apostacerta(){const data=await collectAposta('prematch'),games=data.events.flatMap(e=>{const q=data.quotes.filter(q=>q.eventId===e.id);return q.length===3?[{home:e.home,away:e.away,time:e.startsAt,league:e.league,odds:q.map(r=>r.decimalOdds),url:null}]:[]});return {games,at:data.generatedAt,partial:true,note:'Futebol pré-jogo 1X2 · API pública Betby · link direto ainda não validado'}}
+export const adapters={...houseCollectors,apostacerta,grana,exclusive,tobetano,...Object.fromEntries(Object.entries(blocked).map(([id,url])=>[id,async()=>{const r=await fetch(url,{signal:AbortSignal.timeout(15000)});if(!r.ok)throw Error('HTTP '+r.status+'; não foi contornado o bloqueio');throw Error('Página respondeu, mas não há parser validado para novas odds nesta fonte')}]))};

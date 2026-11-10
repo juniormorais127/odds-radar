@@ -1,7 +1,7 @@
 (()=>{
  const el=id=>document.getElementById(id),safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const stamp=s=>new Date(s).toLocaleString('pt-BR',{timeZone:'America/Fortaleza'}),odd=n=>Number(n).toFixed(2),pct=n=>(n>0?'+':'')+n.toFixed(1)+'%';
- const labels={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',two:'2UP',grana:'Granawin',sportsbet:'Sportsbet.io',exclusive:'ExclusiveBet',stake:'Stake',fortune:'FortuneJack',tobetano:'Tobetano'};
+ const labels={giro:'Giro Certo',esporte:'Esportenet SP',melbet:'Melbet',jogos:'Esportenet Jogos',futamina:'Futamina',two:'2UP',grana:'Granawin',sportsbet:'Sportsbet.io',exclusive:'ExclusiveBet',stake:'Stake',fortune:'FortuneJack',apostacerta:'Aposta Certa',tobetano:'Tobetano'};
  let data=null,page=0,error='',busy=false;
  const nav=document.querySelector('nav'),button=document.createElement('button');button.role='tab';button.dataset.tab='history';button.setAttribute('aria-selected','false');button.textContent='Histórico · 72h';nav.append(button);
  const pane=document.createElement('section');pane.id='historyPane';pane.hidden=true;
